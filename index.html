@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zucker Nexus V3</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Discord Dark Theme with Neon */
+        body { background-color: #202225; color: #dcddde; }
+        .glassmorphism { background: rgba(54, 57, 63, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .adm-tag { color: #ff0000; text-shadow: 0 0 10px #ff0000; animation: neon-glow 1.5s ease-in-out infinite alternate; }
+        .vip-tag { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
+        .mod-tag { color: #00bfff; text-shadow: 0 0 10px #00bfff; }
+        .helper-tag { color: #32cd32; text-shadow: 0 0 5px #32cd32; }
+        .owner-tag { color: #ff4500; text-shadow: 0 0 15px #ff4500; }
+        .member-tag { color: #00ff00; }
+        @keyframes neon-glow { from { text-shadow: 0 0 5px currentColor; } to { text-shadow: 0 0 20px currentColor; } }
+        .online { color: #3ba55c; } /* Green dot */
+        .offline { color: #747f8d; } /* Gray dot */
+        .system-msg { color: #7289da; font-style: italic; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="flex-1 flex flex-col justify-center items-center p-4">
+        <h1 class="text-3xl font-bold mb-6">Zucker Nexus V3</h1>
+        <input type="text" id="nick" placeholder="Nickname" class="w-full max-w-md p-3 mb-4 rounded glassmorphism placeholder-gray-400">
+        <input type="password" id="senha" placeholder="Senha" class="w-full max-w-md p-3 mb-4 rounded glassmorphism placeholder-gray-400">
+        <button onclick="handleAuth('register')" class="w-full max-w-md bg-green-600 p-3 rounded mb-2">Registrar</button>
+        <button onclick="handleAuth('login')" class="w-full max-w-md bg-blue-600 p-3 rounded">Entrar</button>
+    </div>
+
+    <!-- Banned Screen -->
+    <div id="banned-screen" class="hidden flex-1 flex flex-col justify-center items-center p-4 text-red-500">
+        <h1 class="text-3xl font-bold mb-6">VOCÊ FOI BANIDO!</h1>
+        <p>Entre em contato com o administrador para mais informações.</p>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main-screen" class="hidden flex-1 flex flex-col">
+        <!-- Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-[#36393f] p-2 flex justify-around md:top-0 md:bottom-auto md:flex-col md:w-20 md:h-screen md:p-4">
+            <button onclick="switchTab('global')" class="p-2 text-center">Global</button>
+            <button onclick="switchTab('private')" class="p-2 text-center">Privados</button>
+            <button onclick="switchTab('friends')" class="p-2 text-center">Amigos</button>
+            <button id="admin-btn" class="hidden p-2 text-center bg-red-600" onclick="switchTab('admin')">ADM</button>
+            <button onclick="logout()" class="p-2 text-center bg-gray-600">Sair</button>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="flex-1 p-4 md:ml-20 overflow-y-auto">
+            <!-- Global Chat -->
+            <div id="global-chat" class="hidden flex flex-col h-full">
+                <h2 class="text-2xl mb-4">Chat Global</h2>
+                <div id="global-messages" class="flex-1 overflow-y-auto mb-4 glassmorphism p-4 rounded"></div>
+                <div class="flex items-center">
+                    <div id="emoji-bar" class="flex mr-2">
+                        <button onclick="addEmoji('😀')">😀</button>
+                        <button onclick="addEmoji('😂')">😂</button>
+                        <button onclick="addEmoji('👍')">👍</button>
+                        <button onclick="addEmoji('❤️')">❤️</button>
+                    </div>
+                    <input id="global-input" class="flex-1 p-3 rounded-l glassmorphism" placeholder="Mensagem...">
+                    <button onclick="sendGlobalMessage()" class="bg-blue-600 p-3 rounded-r">Enviar</button>
+                </div>
+            </div>
+
+            <!-- Private Chats -->
+            <div id="private-chat" class="hidden flex flex-col h-full">
+                <h2 class="text-2xl mb-4">Conversas Privadas</h2>
+                <div id="private-list" class="mb-4"></div>
+                <div id="private-messages" class="flex-1 overflow-y-auto mb-4 glassmorphism p-4 rounded"></div>
+                <div class="flex items-center" id="private-input-area" style="display:none;">
+                    <div id="private-emoji-bar" class="flex mr-2">
+                        <button onclick="addEmoji('😀', 'private')">😀</button>
+                        <button onclick="addEmoji('😂', 'private')">😂</button>
+                        <button onclick="addEmoji('👍', 'private')">👍</button>
+                        <button onclick="addEmoji('❤️', 'private')">❤️</button>
+                    </div>
+                    <input id="private-input" class="flex-1 p-3 rounded-l glassmorphism" placeholder="Mensagem...">
+                    <button onclick="sendPrivateMessage()" class="bg-blue-600 p-3 rounded-r">Enviar</button>
+                </div>
+            </div>
+
+            <!-- Friends -->
+            <div id="friends-tab" class="hidden flex flex-col h-full">
+                <h2 class="text-2xl mb-4">Amigos</h2>
+                <input id="search-nick" class="p-3 mb-4 rounded glassmorphism" placeholder="Buscar por nick...">
+                <button onclick="searchUser()" class="bg-blue-600 p-3 rounded mb-4">Buscar</button>
+                <div id="search-results" class="mb-4"></div>
+                <div id="friends-list" class="glassmorphism p-4 rounded"></div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="admin-panel" class="hidden flex flex-col h-full">
+                <h2 class="text-2xl mb-4">Painel ADM</h2>
+                <button onclick="clearGlobalChat()" class="bg-red-600 p-2 rounded mb-4">Limpar Chat Global</button>
+                <div id="users-list" class="glassmorphism p-4 rounded"></div>
+                <div id="reports-list" class="glassmorphism p-4 rounded mt-4"></div>
+            </div>
+
+            <!-- Profile Modal -->
+            <div id="profile-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+                <div class="bg-[#36393f] p-6 rounded glassmorphism">
+                    <h3 id="profile-nick" class="text-xl mb-2"></h3>
+                    <p id="profile-bio" class="mb-4"></p>
+                    <button onclick="closeProfile()" class="bg-gray-600 p-2 rounded">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, update, remove, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBE1DrI03YtbpDhAJWoJpEgBX7lNrQVjx4",
+            authDomain: "realtime-6f684.firebaseapp.com",
+            databaseURL: "https://realtime-6f684-default-rtdb.firebaseio.com",
+            projectId: "realtime-6f684",
+            storageBucket: "realtime-6f684.firebasestorage.app",
+            messagingSenderId: "758885154415",
+            appId: "1:758885154415:web:0caa708f2fb1ca202b179a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentUser = null; // {nick, uid, etc.}
+        let currentTab = 'global';
+        let currentPrivateChatId = null;
+        let currentPrivatePartnerUid = null;
+
+        // Bad words filter
+        const badWords = ['palavrão1', 'palavrão2']; // Add more as needed
+        function filterBadWords(text) {
+            badWords.forEach(word => {
+                text = text.replace(new RegExp(word, 'gi'), '****');
+            });
+            return text;
+        }
+
+        // Handle Authentication (Custom with DB)
+        window.handleAuth = async (type) => {
+            const nick = document.getElementById('nick').value.toLowerCase();
+            const senha = document.getElementById('senha').value;
+            if (!nick || !senha) return alert('Preencha todos os campos');
+
+            const usersQuery = query(ref(db, 'users'), orderByChild('nick'), equalTo(nick));
+            const snapshot = await get(usersQuery);
+
+            if (type === 'register') {
+                if (snapshot.exists()) return alert('Nick já existe!');
+                const uid = push(ref(db, 'users')).key; // Generate unique UID
+                await set(ref(db, `users/${uid}`), {
+                    nick,
+                    senha, // Note: In production, hash this!
+                    tag: 'Membro',
+                    role: 'user',
+                    level: 1,
+                    xp: 0,
+                    isBanned: false,
+                    status: 'online',
+                    bio: 'Olá, sou novo aqui!'
+                });
+                loginSuccess(uid, nick);
+            } else { // Login
+                if (!snapshot.exists()) return alert('Nick não encontrado!');
+                let userData;
+                snapshot.forEach(child => {
+                    userData = child.val();
+                    if (userData.senha !== senha) return alert('Senha incorreta!');
+                    const uid = child.key;
+                    if (userData.isBanned) return showBannedScreen();
+                    update(ref(db, `users/${uid}`), { status: 'online' });
+                    loginSuccess(uid, nick, userData);
+                });
+            }
+        };
+
+        function loginSuccess(uid, nick, data = {}) {
+            currentUser = { uid, nick, ...data };
+            sessionStorage.setItem('zuckerSession', JSON.stringify(currentUser));
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+            loadUserData(uid);
+            switchTab('global');
+            // System message on join
+            push(ref(db, 'chats/global'), {
+                sender: 'Sistema',
+                text: `${nick} entrou no servidor!`,
+                timestamp: Date.now(),
+                system: true
+            });
+        }
+
+        // Check Session on Load
+        window.addEventListener('load', () => {
+            const session = sessionStorage.getItem('zuckerSession');
+            if (session) {
+                const data = JSON.parse(session);
+                currentUser = data;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-screen').classList.remove('hidden');
+                loadUserData(data.uid);
+                switchTab('global');
+                update(ref(db, `users/${data.uid}`), { status: 'online' });
+            }
+        });
+
+        // Logout
+        window.logout = () => {
+            if (currentUser) {
+                update(ref(db, `users/${currentUser.uid}`), { status: 'offline' });
+            }
+            sessionStorage.removeItem('zuckerSession');
+            currentUser = null;
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('auth-screen').classList.remove('hidden');
+        };
+
+        // Load User Data and Ban Check
+        function loadUserData(uid) {
+            const userRef = ref(db, `users/${uid}`);
+            onValue(userRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return logout();
+                currentUser = { ...currentUser, ...data };
+                if (data.isBanned) {
+                    showBannedScreen();
+                    return;
+                }
+                if (data.role === 'admin') {
+                    document.getElementById('admin-btn').classList.remove('hidden');
+                }
+                loadFriends();
+                if (currentTab === 'admin') loadAdminPanel();
+            });
+        }
+
+        function showBannedScreen() {
+            logout();
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('banned-screen').classList.remove('hidden');
+        }
+
+        // Switch Tabs
+        window.switchTab = (tab) => {
+            currentTab = tab;
+            ['global-chat', 'private-chat', 'friends-tab', 'admin-panel'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(`${tab}-chat` || `${tab}-tab` || `${tab}-panel`).classList.remove('hidden');
+            if (tab === 'global') loadGlobalMessages();
+            if (tab === 'private') loadPrivateChats();
+            if (tab === 'friends') loadFriends();
+            if (tab === 'admin') loadAdminPanel();
+        };
+
+        // Global Chat
+        function loadGlobalMessages() {
+            const messagesRef = ref(db, 'chats/global');
+            onValue(messagesRef, (snapshot) => {
+                const messagesDiv = document.getElementById('global-messages');
+                messagesDiv.innerHTML = '';
+                snapshot.forEach((child) => {
+                    const msg = child.val();
+                    const formattedTime = new Date(msg.timestamp).toLocaleString();
+                    let tagClass = 'member-tag';
+                    if (msg.role === 'admin') tagClass = 'adm-tag';
+                    else if (msg.tag === 'VIP') tagClass = 'vip-tag';
+                    else if (msg.tag === 'MOD') tagClass = 'mod-tag';
+                    else if (msg.tag === 'Ajudante') tagClass = 'helper-tag';
+                    else if (msg.tag === 'Dono') tagClass = 'owner-tag';
+
+                    const msgClass = msg.system ? 'system-msg' : '';
+                    const reportBtn = msg.system ? '' : `<button onclick="reportMessage('${child.key}', 'global')" class="text-red-500 ml-2">Denunciar</button>`;
+                    const senderSpan = `<span class="cursor-pointer" onclick="showProfile('${msg.senderUid}')">${msg.sender}</span>`;
+                    messagesDiv.innerHTML += `<div class="mb-2 ${msgClass}"><span class="${tagClass}">[${msg.tag} Lv${msg.level}]</span> ${senderSpan}: ${msg.text} <small>${formattedTime}</small>${reportBtn}</div>`;
+                });
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            });
+        }
+
+        window.sendGlobalMessage = async () => {
+            let text = document.getElementById('global-input').value;
+            if (!text) return;
+            text = filterBadWords(text);
+            await updateXP(5);
+            push(ref(db, 'chats/global'), {
+                sender: currentUser.nick,
+                senderUid: currentUser.uid,
+                text,
+                tag: currentUser.tag,
+                role: currentUser.role,
+                level: currentUser.level,
+                timestamp: Date.now()
+            });
+            document.getElementById('global-input').value = '';
+        };
+
+        // Update XP and Level
+        async function updateXP(amount) {
+            let newXP = currentUser.xp + amount;
+            let newLevel = currentUser.level;
+            if (newXP >= 100) {
+                newXP -= 100;
+                newLevel++;
+                push(ref(db, 'chats/global'), {
+                    sender: 'Sistema',
+                    text: `${currentUser.nick} subiu para o Level ${newLevel}!`,
+                    timestamp: Date.now(),
+                    system: true
+                });
+            }
+            await update(ref(db, `users/${currentUser.uid}`), { xp: newXP, level: newLevel });
+        }
+
+        // Quick Emojis
+        window.addEmoji = (emoji, type = 'global') => {
+            const input = document.getElementById(`${type}-input`);
+            input.value += emoji;
+        };
+
+        // Report Message
+        window.reportMessage = (msgId, chatType) => {
+            push(ref(db, 'reports'), {
+                reporter: currentUser.uid,
+                msgId,
+                chatType,
+                timestamp: Date.now()
+            });
+            alert('Mensagem denunciada!');
+        };
+
+        // Friends System
+        window.searchUser = () => {
+            const nick = document.getElementById('search-nick').value.toLowerCase();
+            if (!nick) return;
+            const usersQuery = query(ref(db, 'users'), orderByChild('nick'), equalTo(nick));
+            get(usersQuery).then((snapshot) => {
+                const resultsDiv = document.getElementById('search-results');
+                resultsDiv.innerHTML = '';
+                snapshot.forEach((child) => {
+                    const uid = child.key;
+                    const user = child.val();
+                    if (uid === currentUser.uid) return;
+                    const statusClass = user.status === 'online' ? 'online' : 'offline';
+                    resultsDiv.innerHTML += `<div class="mb-2 flex justify-between"><span class="${statusClass}">●</span> ${user.nick} [${user.tag}]<button class="bg-green-600 p-1 rounded ml-2" onclick="addFriend('${uid}')">Adicionar</button></div>`;
+                });
+            });
+        };
+
+        window.addFriend = (friendUid) => {
+            set(ref(db, `friends/${currentUser.uid}/${friendUid}`), true);
+            set(ref(db, `friends/${friendUid}/${currentUser.uid}`), true);
+            alert('Amigo adicionado!');
+            loadFriends();
+        };
+
+        function loadFriends() {
+            const friendsRef = ref(db, `friends/${currentUser.uid}`);
+            onValue(friendsRef, (snapshot) => {
+                const friendsList = document.getElementById('friends-list');
+                friendsList.innerHTML = '';
+                snapshot.forEach((child) => {
+                    const friendUid = child.key;
+                    get(ref(db, `users/${friendUid}`)).then((userSnap) => {
+                        const user = userSnap.val();
+                        const statusClass = user.status === 'online' ? 'online' : 'offline';
+                        friendsList.innerHTML += `<div class="mb-2"><span class="${statusClass}">●</span> ${user.nick} [${user.tag}]</div>`;
+                    });
+                });
+            });
+        }
+
+        // Private Chats
+        function loadPrivateChats() {
+            const privateList = document.getElementById('private-list');
+            privateList.innerHTML = '';
+            const friendsRef = ref(db, `friends/${currentUser.uid}`);
+            onValue(friendsRef, (snapshot) => {
+                snapshot.forEach((child) => {
+                    const friendUid = child.key;
+                    get(ref(db, `users/${friendUid}`)).then((userSnap) => {
+                        const user = userSnap.val();
+                        const statusClass = user.status === 'online' ? 'online' : 'offline';
+                        privateList.innerHTML += `<div class="mb-2 cursor-pointer" onclick="openPrivateChat('${friendUid}')"><span class="${statusClass}">●</span> ${user.nick} [${user.tag}]</div>`;
+                    });
+                });
+            });
+        }
+
+        window.openPrivateChat = (partnerUid) => {
+            const uids = [currentUser.uid, partnerUid].sort();
+            currentPrivateChatId = `${uids[0]}_${uids[1]}`;
+            currentPrivatePartnerUid = partnerUid;
+            document.getElementById('private-input-area').style.display = 'flex';
+            loadPrivateMessages();
+        };
+
+        function loadPrivateMessages() {
+            if (!currentPrivateChatId) return;
+            const messagesRef = ref(db, `chats/private/${currentPrivateChatId}`);
+            onValue(messagesRef, (snapshot) => {
+                const messagesDiv = document.getElementById('private-messages');
+                messagesDiv.innerHTML = '';
+                snapshot.forEach((child) => {
+                    const msg = child.val();
+                    const formattedTime = new Date(msg.timestamp).toLocaleString();
+                    let tagClass = 'member-tag';
+                    if (msg.role === 'admin') tagClass = 'adm-tag';
+                    else if (msg.tag === 'VIP') tagClass = 'vip-tag';
+                    else if (msg.tag === 'MOD') tagClass = 'mod-tag';
+                    else if (msg.tag === 'Ajudante') tagClass = 'helper-tag';
+                    else if (msg.tag === 'Dono') tagClass = 'owner-tag';
+
+                    const reportBtn = `<button onclick="reportMessage('${child.key}', 'private/${currentPrivateChatId}')" class="text-red-500 ml-2">Denunciar</button>`;
+                    const senderSpan = `<span class="cursor-pointer" onclick="showProfile('${msg.senderUid}')">${msg.sender}</span>`;
+                    messagesDiv.innerHTML += `<div class="mb-2"><span class="${tagClass}">[${msg.tag} Lv${msg.level}]</span> ${senderSpan}: ${msg.text} <small>${formattedTime}</small>${reportBtn}</div>`;
+                });
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            });
+        }
+
+        window.sendPrivateMessage = async () => {
+            let text = document.getElementById('private-input').value;
+            if (!text || !currentPrivateChatId) return;
+            text = filterBadWords(text);
+            await updateXP(5);
+            push(ref(db, `chats/private/${currentPrivateChatId}`), {
+                sender: currentUser.nick,
+                senderUid: currentUser.uid,
+                text,
+                tag: currentUser.tag,
+                role: currentUser.role,
+                level: currentUser.level,
+                timestamp: Date.now()
+            });
+            document.getElementById('private-input').value = '';
+        };
+
+        // Admin Panel
+        function loadAdminPanel() {
+            // Users List
+            const usersRef = ref(db, 'users');
+            onValue(usersRef, (snapshot) => {
+                const usersList = document.getElementById('users-list');
+                usersList.innerHTML = '<h3>Usuários</h3>';
+                snapshot.forEach((child) => {
+                    const uid = child.key;
+                    const user = child.val();
+                    const statusClass = user.status === 'online' ? 'online' : 'offline';
+                    usersList.innerHTML += `
+                        <div class="mb-4 p-2 glassmorphism rounded flex justify-between items-center">
+                            <span><span class="${statusClass}">●</span> ${user.nick} [${user.tag}] Lv${user.level} ${user.isBanned ? '(Banido)' : ''}</span>
+                            <div>
+                                <button class="bg-red-600 p-1 rounded mr-2" onclick="banUser('${uid}')">Banir</button>
+                                <select onchange="setRole('${uid}', this.value)" class="bg-gray-600 p-1 rounded">
+                                    <option>Selecionar Cargo</option>
+                                    <option value="ADM">ADM</option>
+                                    <option value="VIP">VIP</option>
+                                    <option value="MOD">MOD</option>
+                                    <option value="Ajudante">Ajudante</option>
+                                    <option value="Dono">Dono</option>
+                                    <option value="Membro">Membro</option>
+                                </select>
+                            </div>
+                        </div>`;
+                });
+            });
+
+            // Reports List
+            const reportsRef = ref(db, 'reports');
+            onValue(reportsRef, (snapshot) => {
+                const reportsList = document.getElementById('reports-list');
+                reportsList.innerHTML = '<h3>Denúncias</h3>';
+                snapshot.forEach((child) => {
+                    const report = child.val();
+                    reportsList.innerHTML += `<div class="mb-2">Denúncia de ${report.reporter} em mensagem ${report.msgId} (${report.chatType})</div>`;
+                });
+            });
+        }
+
+        window.banUser = (uid) => {
+            update(ref(db, `users/${uid}`), { isBanned: true, status: 'offline' });
+            alert('Usuário banido!');
+        };
+
+        window.setRole = (uid, tag) => {
+            const role = tag === 'Membro' ? 'user' : 'admin'; // Simplify: ADM-like are admin
+            update(ref(db, `users/${uid}`), { tag, role });
+            alert(`Cargo ${tag} concedido!`);
+        };
+
+        window.clearGlobalChat = () => {
+            remove(ref(db, 'chats/global'));
+            alert('Chat Global limpo!');
+        };
+
+        // Profile
+        window.showProfile = (uid) => {
+            get(ref(db, `users/${uid}`)).then((snapshot) => {
+                const user = snapshot.val();
+                document.getElementById('profile-nick').innerText = user.nick;
+                document.getElementById('profile-bio').innerText = user.bio || 'Sem bio.';
+                document.getElementById('profile-modal').classList.remove('hidden');
+            });
+        };
+
+        window.closeProfile = () => {
+            document.getElementById('profile-modal').classList.add('hidden');
+        };
+
+        // Offline handling
+        window.addEventListener('beforeunload', () => {
+            if (currentUser) {
+                update(ref(db, `users/${currentUser.uid}`), { status: 'offline' });
+            }
+        });
+    </script>
+
+    <!-- Firebase Security Rules
+    {
+      "rules": {
+        ".read": "auth != null",  // But since no auth, adjust in console to true for testing, or implement custom auth rules
+        ".write": "auth != null",
+        "users": {
+          "$uid": {
+            ".read": true,
+            ".write": "root.child('users').child($uid).child('role').val() === 'admin' || $uid === data.child('uid').val()"  // Complex, adjust as needed
+          }
+        },
+        "chats": {
+          ".read": true,
+          ".write": "data.child('users').child(auth.uid).child('isBanned').val() !== true"  // Prevent banned writes
+        }
+      }
+    }
+    -->
+</body>
+</html>
