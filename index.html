@@ -3,119 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zucker Nexus V3</title>
-    <!-- Tailwind CSS CDN -->
+    <title>FireChat Enterprise v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* Discord Dark Theme with Neon */
-        body { background-color: #202225; color: #dcddde; }
-        .glassmorphism { background: rgba(54, 57, 63, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .adm-tag { color: #ff0000; text-shadow: 0 0 10px #ff0000; animation: neon-glow 1.5s ease-in-out infinite alternate; }
-        .vip-tag { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
-        .mod-tag { color: #00bfff; text-shadow: 0 0 10px #00bfff; }
-        .helper-tag { color: #32cd32; text-shadow: 0 0 5px #32cd32; }
-        .owner-tag { color: #ff4500; text-shadow: 0 0 15px #ff4500; }
-        .member-tag { color: #00ff00; }
-        @keyframes neon-glow { from { text-shadow: 0 0 5px currentColor; } to { text-shadow: 0 0 20px currentColor; } }
-        .online { color: #3ba55c; } /* Green dot */
-        .offline { color: #747f8d; } /* Gray dot */
-        .system-msg { color: #7289da; font-style: italic; }
+        :root {
+            --primary: #2563eb;
+            --bg-main: #f8fafc;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); overflow: hidden; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Animações */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Estilos do Chat */
+        #chat-window { height: calc(100vh - 180px); }
+        .message-bubble { max-width: 75%; transition: all 0.2s; }
+        .message-bubble:hover { filter: brightness(0.95); }
+        
+        /* Painel Admin Lateral */
+        .admin-log-entry { font-family: monospace; font-size: 11px; }
+        
+        /* Estado Online */
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid white; }
+        .online { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+        .offline { background-color: #94a3b8; }
+
+        /* UI Overlays */
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans">
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="flex-1 flex flex-col justify-center items-center p-4">
-        <h1 class="text-3xl font-bold mb-6">Zucker Nexus V3</h1>
-        <input type="text" id="nick" placeholder="Nickname" class="w-full max-w-md p-3 mb-4 rounded glassmorphism placeholder-gray-400">
-        <input type="password" id="senha" placeholder="Senha" class="w-full max-w-md p-3 mb-4 rounded glassmorphism placeholder-gray-400">
-        <button onclick="handleAuth('register')" class="w-full max-w-md bg-green-600 p-3 rounded mb-2">Registrar</button>
-        <button onclick="handleAuth('login')" class="w-full max-w-md bg-blue-600 p-3 rounded">Entrar</button>
+<body class="h-screen flex flex-col">
+
+    <div id="global-loader" class="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600"></div>
     </div>
 
-    <!-- Banned Screen -->
-    <div id="banned-screen" class="hidden flex-1 flex flex-col justify-center items-center p-4 text-red-500">
-        <h1 class="text-3xl font-bold mb-6">VOCÊ FOI BANIDO!</h1>
-        <p>Entre em contato com o administrador para mais informações.</p>
-    </div>
+    <div id="toast-container" class="fixed top-5 right-5 z-[100] space-y-2"></div>
 
-    <!-- Main Screen -->
-    <div id="main-screen" class="hidden flex-1 flex flex-col">
-        <!-- Navigation -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-[#36393f] p-2 flex justify-around md:top-0 md:bottom-auto md:flex-col md:w-20 md:h-screen md:p-4">
-            <button onclick="switchTab('global')" class="p-2 text-center">Global</button>
-            <button onclick="switchTab('private')" class="p-2 text-center">Privados</button>
-            <button onclick="switchTab('friends')" class="p-2 text-center">Amigos</button>
-            <button id="admin-btn" class="hidden p-2 text-center bg-red-600" onclick="switchTab('admin')">ADM</button>
-            <button onclick="logout()" class="p-2 text-center bg-gray-600">Sair</button>
-        </nav>
-
-        <!-- Content Area -->
-        <div class="flex-1 p-4 md:ml-20 overflow-y-auto">
-            <!-- Global Chat -->
-            <div id="global-chat" class="hidden flex flex-col h-full">
-                <h2 class="text-2xl mb-4">Chat Global</h2>
-                <div id="global-messages" class="flex-1 overflow-y-auto mb-4 glassmorphism p-4 rounded"></div>
-                <div class="flex items-center">
-                    <div id="emoji-bar" class="flex mr-2">
-                        <button onclick="addEmoji('😀')">😀</button>
-                        <button onclick="addEmoji('😂')">😂</button>
-                        <button onclick="addEmoji('👍')">👍</button>
-                        <button onclick="addEmoji('❤️')">❤️</button>
-                    </div>
-                    <input id="global-input" class="flex-1 p-3 rounded-l glassmorphism" placeholder="Mensagem...">
-                    <button onclick="sendGlobalMessage()" class="bg-blue-600 p-3 rounded-r">Enviar</button>
+    <div id="auth-screen" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-slate-100 p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-blue-600 p-6 text-white text-center">
+                <h1 class="text-3xl font-bold tracking-tighter">FIRECHAT</h1>
+                <p class="text-blue-100 text-sm opacity-80">Comunicação em Tempo Real</p>
+            </div>
+            
+            <div class="p-8">
+                <div class="flex mb-6 bg-slate-100 rounded-lg p-1">
+                    <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2 rounded-md font-semibold text-blue-600 bg-white shadow-sm transition">Login</button>
+                    <button onclick="switchAuthTab('register')" id="tab-register" class="flex-1 py-2 rounded-md font-semibold text-slate-500 transition">Registro</button>
                 </div>
-            </div>
 
-            <!-- Private Chats -->
-            <div id="private-chat" class="hidden flex flex-col h-full">
-                <h2 class="text-2xl mb-4">Conversas Privadas</h2>
-                <div id="private-list" class="mb-4"></div>
-                <div id="private-messages" class="flex-1 overflow-y-auto mb-4 glassmorphism p-4 rounded"></div>
-                <div class="flex items-center" id="private-input-area" style="display:none;">
-                    <div id="private-emoji-bar" class="flex mr-2">
-                        <button onclick="addEmoji('😀', 'private')">😀</button>
-                        <button onclick="addEmoji('😂', 'private')">😂</button>
-                        <button onclick="addEmoji('👍', 'private')">👍</button>
-                        <button onclick="addEmoji('❤️', 'private')">❤️</button>
+                <div id="auth-form-content">
+                    <div id="nick-field" class="hidden mb-4">
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Escolha seu Nick</label>
+                        <input type="text" id="auth-nick" placeholder="@exemplo" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
                     </div>
-                    <input id="private-input" class="flex-1 p-3 rounded-l glassmorphism" placeholder="Mensagem...">
-                    <button onclick="sendPrivateMessage()" class="bg-blue-600 p-3 rounded-r">Enviar</button>
-                </div>
-            </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">E-mail</label>
+                        <input type="email" id="auth-email" placeholder="seu@email.com" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
 
-            <!-- Friends -->
-            <div id="friends-tab" class="hidden flex flex-col h-full">
-                <h2 class="text-2xl mb-4">Amigos</h2>
-                <input id="search-nick" class="p-3 mb-4 rounded glassmorphism" placeholder="Buscar por nick...">
-                <button onclick="searchUser()" class="bg-blue-600 p-3 rounded mb-4">Buscar</button>
-                <div id="search-results" class="mb-4"></div>
-                <div id="friends-list" class="glassmorphism p-4 rounded"></div>
-            </div>
+                    <div class="mb-6">
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Senha</label>
+                        <input type="password" id="auth-pass" placeholder="••••••••" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
 
-            <!-- Admin Panel -->
-            <div id="admin-panel" class="hidden flex flex-col h-full">
-                <h2 class="text-2xl mb-4">Painel ADM</h2>
-                <button onclick="clearGlobalChat()" class="bg-red-600 p-2 rounded mb-4">Limpar Chat Global</button>
-                <div id="users-list" class="glassmorphism p-4 rounded"></div>
-                <div id="reports-list" class="glassmorphism p-4 rounded mt-4"></div>
-            </div>
-
-            <!-- Profile Modal -->
-            <div id="profile-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-                <div class="bg-[#36393f] p-6 rounded glassmorphism">
-                    <h3 id="profile-nick" class="text-xl mb-2"></h3>
-                    <p id="profile-bio" class="mb-4"></p>
-                    <button onclick="closeProfile()" class="bg-gray-600 p-2 rounded">Fechar</button>
+                    <button onclick="processAuth()" id="auth-main-btn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">
+                        Entrar na Conta
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getDatabase, ref, set, push, onValue, update, remove, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    <div id="app-interface" class="hidden h-full flex flex-col md:flex-row">
+        
+        <aside class="w-full md:w-80 bg-white border-r border-slate-200 flex flex-col h-full z-10">
+            <div class="p-6 border-b">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="relative">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl" id="avatar-initial">?</div>
+                        <div class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                    </div>
+                    <div>
+                        <h2 id="user-nick-label" class="font-bold text-slate-800 leading-none truncate w-32">Carregando...</h2>
+                        <span class="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Online</span>
+                    </div>
+                </div>
 
+                <div class="relative">
+                    <input type="text" id="friend-search" placeholder="Adicionar amigo pelo Nick..." class="w-full p-2 pl-3 pr-10 bg-slate-100 rounded-lg text-sm focus:outline-blue-500">
+                    <button onclick="requestAddFriend()" class="absolute right-2 top-1.5 text-blue-600 font-bold text-lg">+</button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto">
+                <div class="p-4 uppercase text-[10px] font-bold text-slate-400 tracking-widest">Conversas Privadas</div>
+                <div id="friends-container" class="space-y-1">
+                    <div class="p-8 text-center text-slate-400 text-xs italic">Nenhum amigo online.</div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t flex justify-around">
+                <button onclick="showAppSection('global')" class="p-2 text-slate-500 hover:text-blue-600 transition" title="Global Chat">🌎</button>
+                <button onclick="showAppSection('admin')" class="p-2 text-slate-500 hover:text-red-600 transition" title="Admin Panel">🛡️</button>
+                <button onclick="logout()" class="p-2 text-slate-500 hover:text-slate-900 transition" title="Sair">🚪</button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-slate-50 relative">
+            
+            <header class="bg-white/80 backdrop-blur-md p-4 border-b border-slate-200 flex justify-between items-center shadow-sm z-10">
+                <div class="flex items-center gap-3">
+                    <div id="current-chat-icon" class="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-600">#</div>
+                    <div>
+                        <h3 id="current-chat-title" class="font-bold text-slate-800">Chat Global</h3>
+                        <p id="current-chat-status" class="text-xs text-slate-500">Todos os usuários ativos</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleInfo()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">ℹ️</button>
+                </div>
+            </header>
+
+            <div id="chat-window" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
+                </div>
+
+            <div class="p-4 bg-white border-t border-slate-200">
+                <div id="reply-preview" class="hidden p-2 bg-slate-50 mb-2 rounded-lg text-xs flex justify-between border-l-4 border-blue-500">
+                    <span id="reply-text">Respondendo a...</span>
+                    <button onclick="cancelReply()" class="text-slate-400">✕</button>
+                </div>
+                <div class="flex items-end gap-3 max-w-5xl mx-auto">
+                    <div class="flex-1 bg-slate-100 rounded-2xl flex items-end p-2 border border-slate-200 focus-within:border-blue-400 focus-within:bg-white transition-all">
+                        <button class="p-2 text-slate-400 hover:text-blue-500">😊</button>
+                        <textarea id="main-input" rows="1" placeholder="Digite sua mensagem..." class="flex-1 p-2 bg-transparent outline-none resize-none max-h-32 text-slate-700"></textarea>
+                    </div>
+                    <button onclick="handleSendMessage()" class="bg-blue-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all transform active:scale-90">
+                        <svg class="w-6 h-6 rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div id="admin-modal" class="hidden absolute inset-0 z-30 modal-overlay flex items-center justify-center p-6">
+                <div class="bg-white w-full max-w-4xl h-[80vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+                    <div class="p-6 bg-slate-900 text-white flex justify-between items-center">
+                        <h2 class="text-xl font-bold flex items-center gap-2">🛡️ Painel de Administração <span class="text-xs bg-red-600 px-2 py-1 rounded">RESTRICTED</span></h2>
+                        <button onclick="closeAdmin()" class="text-slate-400 hover:text-white">✕</button>
+                    </div>
+                    
+                    <div id="admin-auth-gate" class="flex-1 flex flex-center flex-col items-center justify-center p-10 text-center">
+                        <div class="bg-slate-100 p-8 rounded-2xl w-full max-w-sm border border-slate-200">
+                            <p class="mb-4 text-slate-600 font-semibold">Digite o código mestre para prosseguir</p>
+                            <input type="password" id="admin-master-key" class="w-full p-4 text-center text-2xl tracking-[1em] border rounded-xl mb-4 focus:ring-2 focus:ring-red-500 outline-none">
+                            <button onclick="unlockAdmin()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">Autenticar</button>
+                        </div>
+                    </div>
+
+                    <div id="admin-main-view" class="hidden flex-1 flex flex-col md:flex-row overflow-hidden">
+                        <div class="w-full md:w-1/3 border-r bg-slate-50 overflow-y-auto">
+                            <div class="p-4 font-bold text-xs text-slate-400 uppercase">Gerenciar Membros</div>
+                            <div id="admin-user-list" class="divide-y divide-slate-200">
+                                </div>
+                        </div>
+                        <div class="flex-1 p-6 flex flex-col">
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <button onclick="adminGlobalClearChat()" class="p-4 bg-orange-50 border border-orange-200 text-orange-700 rounded-2xl hover:bg-orange-100 transition text-left">
+                                    <p class="font-bold">Limpar Global</p>
+                                    <p class="text-[10px] opacity-70">Apaga todo o histórico público</p>
+                                </button>
+                                <button class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl hover:bg-red-100 transition text-left">
+                                    <p class="font-bold">Modo Silêncio</p>
+                                    <p class="text-[10px] opacity-70">Desativa chat para não-admins</p>
+                                </button>
+                            </div>
+                            <div class="flex-1 bg-black rounded-xl p-4 overflow-y-auto text-emerald-500 font-mono text-[11px]">
+                                <p class="text-slate-500 border-b border-slate-800 pb-1 mb-2">SYSTEM CONSOLE LOGS</p>
+                                <div id="admin-console-logs"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { getDatabase, ref, set, push, onValue, remove, update, serverTimestamp, query, orderByChild, equalTo, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // --- CONFIGURAÇÃO E INICIALIZAÇÃO ---
         const firebaseConfig = {
             apiKey: "AIzaSyBE1DrI03YtbpDhAJWoJpEgBX7lNrQVjx4",
             authDomain: "realtime-6f684.firebaseapp.com",
@@ -123,424 +211,344 @@
             projectId: "realtime-6f684",
             storageBucket: "realtime-6f684.firebasestorage.app",
             messagingSenderId: "758885154415",
-            appId: "1:758885154415:web:0caa708f2fb1ca202b179a"
+            appId: "1:758885154415:web:76c0a17c8c4178fd2b179a",
+            measurementId: "G-T3B2K71VS9"
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getDatabase(app);
+        const analytics = getAnalytics(app);
 
-        let currentUser = null; // {nick, uid, etc.}
-        let currentTab = 'global';
-        let currentPrivateChatId = null;
-        let currentPrivatePartnerUid = null;
+        // VARIÁVEIS DE ESTADO GLOBAL
+        let me = null;
+        let activeChat = { id: 'global', type: 'public', title: 'Chat Global' };
+        let authMode = 'login';
+        let currentUnsubscribe = null;
 
-        // Bad words filter
-        const badWords = ['palavrão1', 'palavrão2']; // Add more as needed
-        function filterBadWords(text) {
-            badWords.forEach(word => {
-                text = text.replace(new RegExp(word, 'gi'), '****');
-            });
-            return text;
-        }
+        // --- SISTEMA DE UI (DOM) ---
+        const ui = {
+            loader: document.getElementById('global-loader'),
+            authScreen: document.getElementById('auth-screen'),
+            appInterface: document.getElementById('app-interface'),
+            chatWindow: document.getElementById('chat-window'),
+            mainInput: document.getElementById('main-input'),
+            adminModal: document.getElementById('admin-modal'),
+            toastContainer: document.getElementById('toast-container')
+        };
 
-        // Handle Authentication (Custom with DB)
-        window.handleAuth = async (type) => {
-            const nick = document.getElementById('nick').value.toLowerCase();
-            const senha = document.getElementById('senha').value;
-            if (!nick || !senha) return alert('Preencha todos os campos');
+        // --- LÓGICA DE AUTENTICAÇÃO ---
+        window.switchAuthTab = (mode) => {
+            authMode = mode;
+            const isReg = mode === 'register';
+            document.getElementById('nick-field').classList.toggle('hidden', !isReg);
+            document.getElementById('tab-login').className = isReg ? "flex-1 py-2 rounded-md font-semibold text-slate-500 transition" : "flex-1 py-2 rounded-md font-semibold text-blue-600 bg-white shadow-sm transition";
+            document.getElementById('tab-register').className = isReg ? "flex-1 py-2 rounded-md font-semibold text-blue-600 bg-white shadow-sm transition" : "flex-1 py-2 rounded-md font-semibold text-slate-500 transition";
+            document.getElementById('auth-main-btn').innerText = isReg ? "Criar Minha Conta" : "Entrar na Conta";
+        };
 
-            const usersQuery = query(ref(db, 'users'), orderByChild('nick'), equalTo(nick));
-            const snapshot = await get(usersQuery);
+        window.processAuth = async () => {
+            const email = document.getElementById('auth-email').value;
+            const pass = document.getElementById('auth-pass').value;
+            const nick = document.getElementById('auth-nick').value.trim();
 
-            if (type === 'register') {
-                if (snapshot.exists()) return alert('Nick já existe!');
-                const uid = push(ref(db, 'users')).key; // Generate unique UID
-                await set(ref(db, `users/${uid}`), {
-                    nick,
-                    senha, // Note: In production, hash this!
-                    tag: 'Membro',
-                    role: 'user',
-                    level: 1,
-                    xp: 0,
-                    isBanned: false,
-                    status: 'online',
-                    bio: 'Olá, sou novo aqui!'
-                });
-                loginSuccess(uid, nick);
-            } else { // Login
-                if (!snapshot.exists()) return alert('Nick não encontrado!');
-                let userData;
-                snapshot.forEach(child => {
-                    userData = child.val();
-                    if (userData.senha !== senha) return alert('Senha incorreta!');
-                    const uid = child.key;
-                    if (userData.isBanned) return showBannedScreen();
-                    update(ref(db, `users/${uid}`), { status: 'online' });
-                    loginSuccess(uid, nick, userData);
-                });
+            if (!email || !pass) return showToast("Preencha todos os campos!", "error");
+
+            ui.loader.classList.remove('hidden');
+
+            try {
+                if (authMode === 'register') {
+                    if (!nick) throw new Error("Escolha um Nickname!");
+                    const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+                    await set(ref(db, `users/${userCred.user.uid}`), {
+                        nick: nick,
+                        email: email,
+                        id: userCred.user.uid,
+                        muted: false,
+                        banned: false,
+                        online: true,
+                        role: 'user',
+                        createdAt: serverTimestamp()
+                    });
+                } else {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                }
+            } catch (error) {
+                showToast(error.message, "error");
+                ui.loader.classList.add('hidden');
             }
         };
 
-        function loginSuccess(uid, nick, data = {}) {
-            currentUser = { uid, nick, ...data };
-            sessionStorage.setItem('zuckerSession', JSON.stringify(currentUser));
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('main-screen').classList.remove('hidden');
-            loadUserData(uid);
-            switchTab('global');
-            // System message on join
-            push(ref(db, 'chats/global'), {
-                sender: 'Sistema',
-                text: `${nick} entrou no servidor!`,
-                timestamp: Date.now(),
-                system: true
-            });
-        }
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userRef = ref(db, `users/${user.uid}`);
+                onValue(userRef, (snap) => {
+                    const data = snap.val();
+                    if (!data) return;
+                    if (data.banned) {
+                        alert("🔴 Você foi banido permanentemente deste servidor.");
+                        logout();
+                        return;
+                    }
+                    me = data;
+                    document.getElementById('user-nick-label').innerText = me.nick;
+                    document.getElementById('avatar-initial').innerText = me.nick.charAt(0).toUpperCase();
+                    
+                    ui.authScreen.classList.add('hidden');
+                    ui.appInterface.classList.remove('hidden');
+                    ui.loader.classList.add('hidden');
+                    
+                    update(ref(db, `users/${me.id}`), { online: true });
+                });
 
-        // Check Session on Load
-        window.addEventListener('load', () => {
-            const session = sessionStorage.getItem('zuckerSession');
-            if (session) {
-                const data = JSON.parse(session);
-                currentUser = data;
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('main-screen').classList.remove('hidden');
-                loadUserData(data.uid);
-                switchTab('global');
-                update(ref(db, `users/${data.uid}`), { status: 'online' });
+                initAppCore();
+            } else {
+                ui.authScreen.classList.remove('hidden');
+                ui.appInterface.classList.add('hidden');
+                ui.loader.classList.add('hidden');
             }
         });
 
-        // Logout
         window.logout = () => {
-            if (currentUser) {
-                update(ref(db, `users/${currentUser.uid}`), { status: 'offline' });
-            }
-            sessionStorage.removeItem('zuckerSession');
-            currentUser = null;
-            document.getElementById('main-screen').classList.add('hidden');
-            document.getElementById('auth-screen').classList.remove('hidden');
+            if (me) update(ref(db, `users/${me.id}`), { online: false });
+            signOut(auth);
         };
 
-        // Load User Data and Ban Check
-        function loadUserData(uid) {
-            const userRef = ref(db, `users/${uid}`);
-            onValue(userRef, (snapshot) => {
-                const data = snapshot.val();
-                if (!data) return logout();
-                currentUser = { ...currentUser, ...data };
-                if (data.isBanned) {
-                    showBannedScreen();
-                    return;
-                }
-                if (data.role === 'admin') {
-                    document.getElementById('admin-btn').classList.remove('hidden');
-                }
-                loadFriends();
-                if (currentTab === 'admin') loadAdminPanel();
+        // --- SISTEMA DE CHAT (CORE) ---
+        function initAppCore() {
+            listenGlobalMessages();
+            listenFriendsList();
+            setupPresence();
+        }
+
+        function listenGlobalMessages() {
+            if (currentUnsubscribe) currentUnsubscribe();
+            
+            const globalRef = ref(db, 'messages/global');
+            currentUnsubscribe = onValue(globalRef, (snap) => {
+                if (activeChat.id !== 'global') return;
+                renderMessages(snap);
             });
         }
 
-        function showBannedScreen() {
-            logout();
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('main-screen').classList.add('hidden');
-            document.getElementById('banned-screen').classList.remove('hidden');
+        window.handleSendMessage = () => {
+            const text = ui.mainInput.value.trim();
+            if (!text || !me) return;
+            if (me.muted) return showToast("Você está impedido de falar no chat.", "error");
+
+            const path = activeChat.type === 'public' 
+                ? 'messages/global' 
+                : `messages/private/${activeChat.id}`;
+
+            push(ref(db, path), {
+                senderId: me.id,
+                senderNick: me.nick,
+                text: text,
+                timestamp: serverTimestamp()
+            });
+
+            ui.mainInput.value = "";
+            ui.mainInput.style.height = 'auto';
+        };
+
+        function renderMessages(snap) {
+            ui.chatWindow.innerHTML = "";
+            snap.forEach(child => {
+                const msg = child.val();
+                const isMe = msg.senderId === me.id;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-2 fade-in`;
+                
+                wrapper.innerHTML = `
+                    <span class="text-[10px] text-slate-400 px-2 mb-1">${isMe ? 'Você' : msg.senderNick}</span>
+                    <div class="message-bubble p-3 rounded-2xl shadow-sm text-sm ${
+                        isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-200 rounded-tl-none'
+                    }">
+                        ${msg.text}
+                    </div>
+                `;
+                ui.chatWindow.appendChild(wrapper);
+            });
+            ui.chatWindow.scrollTop = ui.chatWindow.scrollHeight;
         }
 
-        // Switch Tabs
-        window.switchTab = (tab) => {
-            currentTab = tab;
-            ['global-chat', 'private-chat', 'friends-tab', 'admin-panel'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-            document.getElementById(`${tab}-chat` || `${tab}-tab` || `${tab}-panel`).classList.remove('hidden');
-            if (tab === 'global') loadGlobalMessages();
-            if (tab === 'private') loadPrivateChats();
-            if (tab === 'friends') loadFriends();
-            if (tab === 'admin') loadAdminPanel();
-        };
+        // --- AMIGOS E DIRECTS ---
+        window.requestAddFriend = async () => {
+            const targetNick = document.getElementById('friend-search').value.trim();
+            if (!targetNick || targetNick === me.nick) return;
 
-        // Global Chat
-        function loadGlobalMessages() {
-            const messagesRef = ref(db, 'chats/global');
-            onValue(messagesRef, (snapshot) => {
-                const messagesDiv = document.getElementById('global-messages');
-                messagesDiv.innerHTML = '';
-                snapshot.forEach((child) => {
-                    const msg = child.val();
-                    const formattedTime = new Date(msg.timestamp).toLocaleString();
-                    let tagClass = 'member-tag';
-                    if (msg.role === 'admin') tagClass = 'adm-tag';
-                    else if (msg.tag === 'VIP') tagClass = 'vip-tag';
-                    else if (msg.tag === 'MOD') tagClass = 'mod-tag';
-                    else if (msg.tag === 'Ajudante') tagClass = 'helper-tag';
-                    else if (msg.tag === 'Dono') tagClass = 'owner-tag';
-
-                    const msgClass = msg.system ? 'system-msg' : '';
-                    const reportBtn = msg.system ? '' : `<button onclick="reportMessage('${child.key}', 'global')" class="text-red-500 ml-2">Denunciar</button>`;
-                    const senderSpan = `<span class="cursor-pointer" onclick="showProfile('${msg.senderUid}')">${msg.sender}</span>`;
-                    messagesDiv.innerHTML += `<div class="mb-2 ${msgClass}"><span class="${tagClass}">[${msg.tag} Lv${msg.level}]</span> ${senderSpan}: ${msg.text} <small>${formattedTime}</small>${reportBtn}</div>`;
-                });
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            });
-        }
-
-        window.sendGlobalMessage = async () => {
-            let text = document.getElementById('global-input').value;
-            if (!text) return;
-            text = filterBadWords(text);
-            await updateXP(5);
-            push(ref(db, 'chats/global'), {
-                sender: currentUser.nick,
-                senderUid: currentUser.uid,
-                text,
-                tag: currentUser.tag,
-                role: currentUser.role,
-                level: currentUser.level,
-                timestamp: Date.now()
-            });
-            document.getElementById('global-input').value = '';
-        };
-
-        // Update XP and Level
-        async function updateXP(amount) {
-            let newXP = currentUser.xp + amount;
-            let newLevel = currentUser.level;
-            if (newXP >= 100) {
-                newXP -= 100;
-                newLevel++;
-                push(ref(db, 'chats/global'), {
-                    sender: 'Sistema',
-                    text: `${currentUser.nick} subiu para o Level ${newLevel}!`,
-                    timestamp: Date.now(),
-                    system: true
-                });
-            }
-            await update(ref(db, `users/${currentUser.uid}`), { xp: newXP, level: newLevel });
-        }
-
-        // Quick Emojis
-        window.addEmoji = (emoji, type = 'global') => {
-            const input = document.getElementById(`${type}-input`);
-            input.value += emoji;
-        };
-
-        // Report Message
-        window.reportMessage = (msgId, chatType) => {
-            push(ref(db, 'reports'), {
-                reporter: currentUser.uid,
-                msgId,
-                chatType,
-                timestamp: Date.now()
-            });
-            alert('Mensagem denunciada!');
-        };
-
-        // Friends System
-        window.searchUser = () => {
-            const nick = document.getElementById('search-nick').value.toLowerCase();
-            if (!nick) return;
-            const usersQuery = query(ref(db, 'users'), orderByChild('nick'), equalTo(nick));
-            get(usersQuery).then((snapshot) => {
-                const resultsDiv = document.getElementById('search-results');
-                resultsDiv.innerHTML = '';
-                snapshot.forEach((child) => {
-                    const uid = child.key;
-                    const user = child.val();
-                    if (uid === currentUser.uid) return;
-                    const statusClass = user.status === 'online' ? 'online' : 'offline';
-                    resultsDiv.innerHTML += `<div class="mb-2 flex justify-between"><span class="${statusClass}">●</span> ${user.nick} [${user.tag}]<button class="bg-green-600 p-1 rounded ml-2" onclick="addFriend('${uid}')">Adicionar</button></div>`;
-                });
-            });
-        };
-
-        window.addFriend = (friendUid) => {
-            set(ref(db, `friends/${currentUser.uid}/${friendUid}`), true);
-            set(ref(db, `friends/${friendUid}/${currentUser.uid}`), true);
-            alert('Amigo adicionado!');
-            loadFriends();
-        };
-
-        function loadFriends() {
-            const friendsRef = ref(db, `friends/${currentUser.uid}`);
-            onValue(friendsRef, (snapshot) => {
-                const friendsList = document.getElementById('friends-list');
-                friendsList.innerHTML = '';
-                snapshot.forEach((child) => {
-                    const friendUid = child.key;
-                    get(ref(db, `users/${friendUid}`)).then((userSnap) => {
-                        const user = userSnap.val();
-                        const statusClass = user.status === 'online' ? 'online' : 'offline';
-                        friendsList.innerHTML += `<div class="mb-2"><span class="${statusClass}">●</span> ${user.nick} [${user.tag}]</div>`;
-                    });
-                });
-            });
-        }
-
-        // Private Chats
-        function loadPrivateChats() {
-            const privateList = document.getElementById('private-list');
-            privateList.innerHTML = '';
-            const friendsRef = ref(db, `friends/${currentUser.uid}`);
-            onValue(friendsRef, (snapshot) => {
-                snapshot.forEach((child) => {
-                    const friendUid = child.key;
-                    get(ref(db, `users/${friendUid}`)).then((userSnap) => {
-                        const user = userSnap.val();
-                        const statusClass = user.status === 'online' ? 'online' : 'offline';
-                        privateList.innerHTML += `<div class="mb-2 cursor-pointer" onclick="openPrivateChat('${friendUid}')"><span class="${statusClass}">●</span> ${user.nick} [${user.tag}]</div>`;
-                    });
-                });
-            });
-        }
-
-        window.openPrivateChat = (partnerUid) => {
-            const uids = [currentUser.uid, partnerUid].sort();
-            currentPrivateChatId = `${uids[0]}_${uids[1]}`;
-            currentPrivatePartnerUid = partnerUid;
-            document.getElementById('private-input-area').style.display = 'flex';
-            loadPrivateMessages();
-        };
-
-        function loadPrivateMessages() {
-            if (!currentPrivateChatId) return;
-            const messagesRef = ref(db, `chats/private/${currentPrivateChatId}`);
-            onValue(messagesRef, (snapshot) => {
-                const messagesDiv = document.getElementById('private-messages');
-                messagesDiv.innerHTML = '';
-                snapshot.forEach((child) => {
-                    const msg = child.val();
-                    const formattedTime = new Date(msg.timestamp).toLocaleString();
-                    let tagClass = 'member-tag';
-                    if (msg.role === 'admin') tagClass = 'adm-tag';
-                    else if (msg.tag === 'VIP') tagClass = 'vip-tag';
-                    else if (msg.tag === 'MOD') tagClass = 'mod-tag';
-                    else if (msg.tag === 'Ajudante') tagClass = 'helper-tag';
-                    else if (msg.tag === 'Dono') tagClass = 'owner-tag';
-
-                    const reportBtn = `<button onclick="reportMessage('${child.key}', 'private/${currentPrivateChatId}')" class="text-red-500 ml-2">Denunciar</button>`;
-                    const senderSpan = `<span class="cursor-pointer" onclick="showProfile('${msg.senderUid}')">${msg.sender}</span>`;
-                    messagesDiv.innerHTML += `<div class="mb-2"><span class="${tagClass}">[${msg.tag} Lv${msg.level}]</span> ${senderSpan}: ${msg.text} <small>${formattedTime}</small>${reportBtn}</div>`;
-                });
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            });
-        }
-
-        window.sendPrivateMessage = async () => {
-            let text = document.getElementById('private-input').value;
-            if (!text || !currentPrivateChatId) return;
-            text = filterBadWords(text);
-            await updateXP(5);
-            push(ref(db, `chats/private/${currentPrivateChatId}`), {
-                sender: currentUser.nick,
-                senderUid: currentUser.uid,
-                text,
-                tag: currentUser.tag,
-                role: currentUser.role,
-                level: currentUser.level,
-                timestamp: Date.now()
-            });
-            document.getElementById('private-input').value = '';
-        };
-
-        // Admin Panel
-        function loadAdminPanel() {
-            // Users List
             const usersRef = ref(db, 'users');
-            onValue(usersRef, (snapshot) => {
-                const usersList = document.getElementById('users-list');
-                usersList.innerHTML = '<h3>Usuários</h3>';
-                snapshot.forEach((child) => {
-                    const uid = child.key;
-                    const user = child.val();
-                    const statusClass = user.status === 'online' ? 'online' : 'offline';
-                    usersList.innerHTML += `
-                        <div class="mb-4 p-2 glassmorphism rounded flex justify-between items-center">
-                            <span><span class="${statusClass}">●</span> ${user.nick} [${user.tag}] Lv${user.level} ${user.isBanned ? '(Banido)' : ''}</span>
-                            <div>
-                                <button class="bg-red-600 p-1 rounded mr-2" onclick="banUser('${uid}')">Banir</button>
-                                <select onchange="setRole('${uid}', this.value)" class="bg-gray-600 p-1 rounded">
-                                    <option>Selecionar Cargo</option>
-                                    <option value="ADM">ADM</option>
-                                    <option value="VIP">VIP</option>
-                                    <option value="MOD">MOD</option>
-                                    <option value="Ajudante">Ajudante</option>
-                                    <option value="Dono">Dono</option>
-                                    <option value="Membro">Membro</option>
-                                </select>
-                            </div>
-                        </div>`;
-                });
-            });
+            const snap = await get(usersRef);
+            let found = null;
+            
+            snap.forEach(u => { if (u.val().nick === targetNick) found = u.val(); });
 
-            // Reports List
-            const reportsRef = ref(db, 'reports');
-            onValue(reportsRef, (snapshot) => {
-                const reportsList = document.getElementById('reports-list');
-                reportsList.innerHTML = '<h3>Denúncias</h3>';
-                snapshot.forEach((child) => {
-                    const report = child.val();
-                    reportsList.innerHTML += `<div class="mb-2">Denúncia de ${report.reporter} em mensagem ${report.msgId} (${report.chatType})</div>`;
-                });
-            });
-        }
-
-        window.banUser = (uid) => {
-            update(ref(db, `users/${uid}`), { isBanned: true, status: 'offline' });
-            alert('Usuário banido!');
-        };
-
-        window.setRole = (uid, tag) => {
-            const role = tag === 'Membro' ? 'user' : 'admin'; // Simplify: ADM-like are admin
-            update(ref(db, `users/${uid}`), { tag, role });
-            alert(`Cargo ${tag} concedido!`);
-        };
-
-        window.clearGlobalChat = () => {
-            remove(ref(db, 'chats/global'));
-            alert('Chat Global limpo!');
-        };
-
-        // Profile
-        window.showProfile = (uid) => {
-            get(ref(db, `users/${uid}`)).then((snapshot) => {
-                const user = snapshot.val();
-                document.getElementById('profile-nick').innerText = user.nick;
-                document.getElementById('profile-bio').innerText = user.bio || 'Sem bio.';
-                document.getElementById('profile-modal').classList.remove('hidden');
-            });
-        };
-
-        window.closeProfile = () => {
-            document.getElementById('profile-modal').classList.add('hidden');
-        };
-
-        // Offline handling
-        window.addEventListener('beforeunload', () => {
-            if (currentUser) {
-                update(ref(db, `users/${currentUser.uid}`), { status: 'offline' });
+            if (found) {
+                // Adiciona na lista de ambos (Relacionamento bidirecional)
+                await set(ref(db, `friends/${me.id}/${found.id}`), { nick: found.nick, id: found.id });
+                await set(ref(db, `friends/${found.id}/${me.id}`), { nick: me.nick, id: me.id });
+                showToast(`@${found.nick} adicionado!`, "success");
+                document.getElementById('friend-search').value = "";
+            } else {
+                showToast("Usuário não encontrado.", "error");
             }
-        });
-    </script>
+        };
 
-    <!-- Firebase Security Rules
-    {
-      "rules": {
-        ".read": "auth != null",  // But since no auth, adjust in console to true for testing, or implement custom auth rules
-        ".write": "auth != null",
-        "users": {
-          "$uid": {
-            ".read": true,
-            ".write": "root.child('users').child($uid).child('role').val() === 'admin' || $uid === data.child('uid').val()"  // Complex, adjust as needed
-          }
-        },
-        "chats": {
-          ".read": true,
-          ".write": "data.child('users').child(auth.uid).child('isBanned').val() !== true"  // Prevent banned writes
+        function listenFriendsList() {
+            onValue(ref(db, `friends/${me.id}`), (snap) => {
+                const container = document.getElementById('friends-container');
+                container.innerHTML = "";
+                
+                snap.forEach(child => {
+                    const friend = child.val();
+                    const friendId = child.key;
+
+                    // Escuta status online do amigo
+                    onValue(ref(db, `users/${friendId}/online`), (onSnap) => {
+                        const isOnline = onSnap.val();
+                        let friendEl = document.getElementById(`friend-card-${friendId}`);
+                        
+                        if (!friendEl) {
+                            friendEl = document.createElement('div');
+                            friendEl.id = `friend-card-${friendId}`;
+                            friendEl.className = "flex items-center gap-3 p-3 mx-2 rounded-xl cursor-pointer hover:bg-slate-50 transition active:scale-95";
+                            friendEl.onclick = () => openPrivateChat(friend);
+                            container.appendChild(friendEl);
+                        }
+
+                        friendEl.innerHTML = `
+                            <div class="relative">
+                                <div class="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-500">${friend.nick[0].toUpperCase()}</div>
+                                <div class="absolute -bottom-1 -right-1 status-dot ${isOnline ? 'online' : 'offline'}"></div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-slate-700 truncate">${friend.nick}</p>
+                                <p class="text-[10px] ${isOnline ? 'text-emerald-500' : 'text-slate-400'} font-medium">${isOnline ? 'Disponível' : 'Offline'}</p>
+                            </div>
+                        `;
+                    });
+                });
+            });
         }
-      }
-    }
-    -->
+
+        window.openPrivateChat = (friend) => {
+            // Gera um ID de chat único baseado na ordenação alfabética dos IDs dos usuários
+            const chatId = me.id < friend.id ? `${me.id}_${friend.id}` : `${friend.id}_${me.id}`;
+            activeChat = { id: chatId, type: 'private', title: `@${friend.nick}` };
+            
+            document.getElementById('current-chat-title').innerText = activeChat.title;
+            document.getElementById('current-chat-status').innerText = "Conversa Privada";
+            document.getElementById('current-chat-icon').innerText = "👤";
+            
+            if (currentUnsubscribe) currentUnsubscribe();
+            currentUnsubscribe = onValue(ref(db, `messages/private/${chatId}`), (snap) => {
+                renderMessages(snap);
+            });
+            
+            // Mobile: esconde sidebar se necessário (implementar toggle)
+        };
+
+        window.showAppSection = (type) => {
+            if (type === 'global') {
+                activeChat = { id: 'global', type: 'public', title: 'Chat Global' };
+                document.getElementById('current-chat-title').innerText = "Chat Global";
+                document.getElementById('current-chat-status').innerText = "Todos os usuários ativos";
+                document.getElementById('current-chat-icon').innerText = "#";
+                listenGlobalMessages();
+            } else if (type === 'admin') {
+                document.getElementById('admin-modal').classList.remove('hidden');
+            }
+        };
+
+        // --- PAINEL ADMINISTRATIVO (LOGS E AÇÕES) ---
+        window.unlockAdmin = () => {
+            const key = document.getElementById('admin-master-key').value;
+            if (key === "543") {
+                document.getElementById('admin-auth-gate').classList.add('hidden');
+                document.getElementById('admin-main-view').classList.remove('hidden');
+                loadAdminUsersList();
+                logToAdminConsole("Acesso administrativo autorizado.");
+            } else {
+                showToast("Chave Mestra Inválida", "error");
+            }
+        };
+
+        function loadAdminUsersList() {
+            onValue(ref(db, 'users'), (snap) => {
+                const list = document.getElementById('admin-user-list');
+                list.innerHTML = "";
+                snap.forEach(child => {
+                    const u = child.val();
+                    if (u.id === me.id) return;
+                    
+                    const div = document.createElement('div');
+                    div.className = "p-4 hover:bg-white flex items-center justify-between";
+                    div.innerHTML = `
+                        <div>
+                            <p class="font-bold text-sm text-slate-800">${u.nick} ${u.banned ? '🚫' : ''}</p>
+                            <p class="text-[10px] text-slate-400">${u.email}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="adminToggleAction('${u.id}', 'muted', ${!u.muted})" class="p-2 rounded bg-slate-200 hover:bg-orange-200 text-xs">
+                                ${u.muted ? '🔈' : '🔇'}
+                            </button>
+                            <button onclick="adminToggleAction('${u.id}', 'banned', ${!u.banned})" class="p-2 rounded bg-slate-200 hover:bg-red-200 text-xs">
+                                ${u.banned ? '✅' : '⛔'}
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            });
+        }
+
+        window.adminToggleAction = (targetUid, field, value) => {
+            update(ref(db, `users/${targetUid}`), { [field]: value });
+            logToAdminConsole(`Usuário ${targetUid} atualizado: ${field} = ${value}`);
+        };
+
+        window.adminGlobalClearChat = () => {
+            if (confirm("Deseja APAGAR TODAS as mensagens do Chat Global?")) {
+                remove(ref(db, 'messages/global'));
+                logToAdminConsole("Histórico do chat global foi limpo por um administrador.");
+            }
+        };
+
+        function logToAdminConsole(msg) {
+            const log = document.getElementById('admin-console-logs');
+            const p = document.createElement('p');
+            p.className = "admin-log-entry";
+            p.innerText = `[${new Date().toLocaleTimeString()}] > ${msg}`;
+            log.prepend(p);
+        }
+
+        window.closeAdmin = () => {
+            ui.adminModal.classList.add('hidden');
+            document.getElementById('admin-master-key').value = "";
+        };
+
+        // --- UTILITÁRIOS ---
+        function showToast(text, type = "info") {
+            const t = document.createElement('div');
+            t.className = `p-4 rounded-xl shadow-lg text-white font-bold text-sm fade-in ${type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`;
+            t.innerText = text;
+            ui.toastContainer.appendChild(t);
+            setTimeout(() => t.remove(), 4000);
+        }
+
+        function setupPresence() {
+            // Gerenciamento de status offline ao fechar aba
+            const myStatusRef = ref(db, `users/${auth.currentUser.uid}/online`);
+            window.addEventListener('beforeunload', () => update(ref(db, `users/${me.id}`), { online: false }));
+        }
+
+        // Auto-expand textarea
+        ui.mainInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+    </script>
 </body>
-</html>
+                            </html>
