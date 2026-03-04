@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DAMAS ONLINE</title>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Oswald:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#CC2200; --red-bright:#FF3300; --red-piece:#DD1100; --red-king:#FF6600;
+  --black-piece:#1a1a1a; --black-king:#444;
+  --board-light:#f0d9a8; --board-dark:#8B4513;
+  --gold:#FFD700; --green:#00CC44; --green-dim:#004411;
+  --dark:#080808; --darker:#040404; --panel:rgba(10,10,10,0.92);
+  --border:rgba(204,34,0,0.3); --text:#f0e0d0; --warn:#FF8800;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+.hidden{display:none !important;}
+body{background:var(--darker);color:var(--text);font-family:'Oswald',sans-serif;overflow:hidden;height:100dvh;width:100dvw;user-select:none;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:9999;}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.7) 100%);pointer-events:none;z-index:9998;}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
+
+/* LOADING */
+#screen-loading{background:#000;z-index:1000;}
+.loading-logo{font-family:'Creepster',cursive;font-size:3.5rem;color:var(--red-bright);text-shadow:0 0 30px rgba(204,34,0,0.9);margin-bottom:2rem;animation:flicker 3s infinite;}
+.loading-bar-wrap{width:220px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;}
+.loading-bar{height:100%;background:var(--red-bright);border-radius:2px;width:0;animation:loadAnim 2.5s ease-in-out forwards;box-shadow:0 0 10px var(--red-bright);}
+@keyframes loadAnim{0%{width:0}60%{width:80%}100%{width:100%}}
+.loading-text{margin-top:1rem;font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:rgba(255,255,255,0.3);letter-spacing:0.15em;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes flicker{0%,95%,100%{opacity:1}96%{opacity:0.7}97%{opacity:1}98%{opacity:0.5}99%{opacity:1}}
+
+/* LOGIN */
+#screen-login{background:radial-gradient(ellipse at 50% 40%,#1a0800 0%,#040404 70%);}
+.login-logo{font-family:'Creepster',cursive;font-size:clamp(3rem,12vw,6rem);color:var(--red-bright);text-shadow:0 0 30px rgba(204,34,0,0.8),4px 4px 0 #000;letter-spacing:0.05em;animation:flicker 3s infinite;}
+.login-sub{font-family:'Share Tech Mono',monospace;color:var(--gold);font-size:clamp(0.65rem,2vw,0.85rem);letter-spacing:0.25em;margin-bottom:2rem;opacity:0.8;}
+.login-box{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:2rem;width:min(90vw,360px);display:flex;flex-direction:column;gap:1rem;box-shadow:0 0 40px rgba(204,34,0,0.08);}
+.input-group{display:flex;flex-direction:column;gap:0.4rem;}
+.input-group label{font-size:0.72rem;letter-spacing:0.15em;color:var(--gold);text-transform:uppercase;}
+.input-group input{background:rgba(255,100,0,0.04);border:1px solid var(--border);border-radius:3px;padding:0.75rem 1rem;color:#fff;font-family:'Share Tech Mono',monospace;font-size:1rem;outline:none;transition:border-color 0.2s,box-shadow 0.2s;width:100%;}
+.input-group input:focus{border-color:var(--gold);box-shadow:0 0 12px rgba(255,215,0,0.15);}
+.btn{padding:0.85rem 1.5rem;border:none;border-radius:4px;font-family:'Oswald',sans-serif;font-size:1rem;font-weight:600;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
+.btn-primary{background:var(--red-bright);color:#fff;box-shadow:0 4px 15px rgba(204,34,0,0.4);}
+.btn-primary:hover,.btn-primary:active{background:#ff4422;transform:translateY(-1px);}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--gold);}
+.btn-secondary:hover,.btn-secondary:active{border-color:var(--gold);background:rgba(255,215,0,0.06);}
+.divider{display:flex;align-items:center;gap:1rem;color:rgba(255,255,255,0.2);font-size:0.75rem;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.error-msg{color:var(--red-bright);font-size:0.78rem;font-family:'Share Tech Mono',monospace;text-align:center;min-height:1.2em;}
+.login-footer{margin-top:1rem;font-size:0.72rem;color:rgba(255,255,255,0.2);text-align:center;font-family:'Share Tech Mono',monospace;}
+
+/* LOBBY */
+#screen-lobby{background:radial-gradient(ellipse at 50% 0%,#1a0800 0%,#040404 60%);align-items:stretch;justify-content:flex-start;padding:0;overflow-y:auto;}
+.lobby-header{padding:1rem 1.5rem;background:rgba(0,0,0,0.6);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;backdrop-filter:blur(10px);}
+.lobby-title{font-family:'Creepster',cursive;color:var(--red-bright);font-size:clamp(1.4rem,5vw,2rem);text-shadow:0 0 15px rgba(204,34,0,0.6);}
+.player-badge{display:flex;align-items:center;gap:0.6rem;background:var(--panel);border:1px solid var(--border);padding:0.4rem 0.8rem;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:0.8rem;}
+.player-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.lobby-body{padding:1.5rem;max-width:800px;margin:0 auto;width:100%;}
+.lobby-actions{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;}
+.section-title{font-size:0.75rem;letter-spacing:0.2em;color:var(--gold);text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:0.8rem;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.rooms-grid{display:flex;flex-direction:column;gap:0.75rem;margin-bottom:2rem;}
+.room-card{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.2s;gap:1rem;}
+.room-card:hover{border-color:var(--gold);background:rgba(255,215,0,0.03);transform:translateX(3px);}
+.room-card.full{opacity:0.5;cursor:not-allowed;}
+.room-name{font-size:1rem;font-weight:600;color:#fff;}
+.room-meta{font-size:0.75rem;color:rgba(255,255,255,0.4);font-family:'Share Tech Mono',monospace;margin-top:0.2rem;}
+.room-status{font-size:0.7rem;font-family:'Share Tech Mono',monospace;padding:0.2rem 0.5rem;border-radius:2px;white-space:nowrap;}
+.status-waiting{color:var(--green);border:1px solid rgba(0,200,68,0.4);background:rgba(0,200,68,0.1);}
+.status-playing{color:var(--warn);border:1px solid rgba(255,136,0,0.4);background:rgba(255,136,0,0.1);}
+.empty-rooms{text-align:center;padding:3rem;color:rgba(255,255,255,0.2);font-family:'Share Tech Mono',monospace;font-size:0.85rem;}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal{background:#0a0602;border:1px solid var(--border);border-radius:8px;padding:2rem;width:min(92vw,380px);display:flex;flex-direction:column;gap:1rem;box-shadow:0 0 60px rgba(204,34,0,0.08);}
+.modal-title{font-family:'Creepster',cursive;color:var(--red-bright);font-size:1.5rem;text-shadow:0 0 15px rgba(204,34,0,0.5);}
+
+/* WAITING ROOM */
+.waiting-player{display:flex;align-items:center;gap:10px;font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:4px;}
+.piece-preview{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,0.2);flex-shrink:0;}
+
+/* GAME SCREEN */
+#screen-game{background:#0a0604;justify-content:flex-start;z-index:50;overflow:hidden;}
+.game-layout{display:flex;width:100%;height:100dvh;align-items:stretch;}
+
+/* SIDEBAR */
+.game-sidebar{width:200px;min-width:160px;background:rgba(0,0,0,0.6);border-right:1px solid var(--border);display:flex;flex-direction:column;gap:0;flex-shrink:0;}
+.sidebar-header{padding:0.8rem 1rem;border-bottom:1px solid var(--border);}
+.sidebar-logo{font-family:'Creepster',cursive;color:var(--red-bright);font-size:1.3rem;}
+.sidebar-section{padding:0.8rem 1rem;border-bottom:1px solid rgba(255,255,255,0.05);}
+.sidebar-label{font-size:0.6rem;letter-spacing:0.15em;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:0.5rem;}
+.player-info-card{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;margin-bottom:6px;}
+.player-info-card.my-turn{background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.3);}
+.player-info-card.not-turn{background:rgba(255,255,255,0.03);border:1px solid transparent;}
+.player-piece-icon{width:22px;height:22px;border-radius:50%;flex-shrink:0;}
+.player-name-txt{font-size:0.75rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.player-count-txt{font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:rgba(255,255,255,0.5);}
+.turn-indicator{text-align:center;padding:8px;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:0.72rem;letter-spacing:0.1em;}
+.turn-mine{background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.4);color:var(--gold);}
+.turn-enemy{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);}
+.btn-leave{margin:auto 1rem 1rem;padding:0.5rem;font-size:0.75rem;}
+
+/* CHAT IN SIDEBAR */
+.chat-wrapper{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0.5rem;}
+.chat-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;}
+.chat-label{font-size:0.6rem;letter-spacing:0.15em;color:rgba(255,255,255,0.3);text-transform:uppercase;}
+#chat-toggle-btn{background:none;border:none;color:rgba(255,255,255,0.3);font-size:0.75rem;cursor:pointer;padding:2px 4px;}
+#chat-toggle-btn:hover{color:var(--gold);}
+#chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(204,34,0,0.2) transparent;}
+#chat-messages::-webkit-scrollbar{width:3px;}
+#chat-messages::-webkit-scrollbar-thumb{background:rgba(204,34,0,0.2);border-radius:2px;}
+.chat-msg{font-family:'Share Tech Mono',monospace;font-size:0.65rem;padding:3px 6px;border-radius:2px;background:rgba(255,255,255,0.03);border-left:2px solid;line-height:1.4;word-break:break-word;animation:chatIn 0.2s ease;}
+@keyframes chatIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.chat-msg.system{border-left-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.35);font-style:italic;}
+.chat-nick{font-weight:bold;margin-right:3px;}
+#chat-input-row{display:flex;gap:4px;margin-top:0.4rem;}
+#chat-input{flex:1;background:rgba(0,0,0,0.5);border:1px solid rgba(204,34,0,0.25);border-radius:3px;padding:4px 6px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:0.68rem;outline:none;min-width:0;}
+#chat-input:focus{border-color:var(--gold);}
+#chat-input::placeholder{color:rgba(255,255,255,0.2);}
+#chat-send{background:rgba(204,34,0,0.3);border:1px solid rgba(204,34,0,0.5);color:var(--red-bright);border-radius:3px;padding:4px 7px;font-size:0.7rem;cursor:pointer;}
+#chat-send:active{transform:scale(0.92);}
+
+/* BOARD AREA */
+.board-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:1rem;}
+#board-container{position:relative;}
+#board{display:grid;grid-template-columns:repeat(8,1fr);border:3px solid rgba(204,34,0,0.5);border-radius:4px;box-shadow:0 0 40px rgba(204,34,0,0.15),0 0 80px rgba(0,0,0,0.8);overflow:hidden;}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;cursor:default;transition:background 0.15s;}
+.cell.light{background:var(--board-light);}
+.cell.dark{background:var(--board-dark);}
+.cell.dark.playable{cursor:pointer;}
+.cell.dark.playable:hover{background:#a05020;}
+.cell.highlight-move{background:#aa6030 !important;box-shadow:inset 0 0 0 2px rgba(255,215,0,0.6);}
+.cell.highlight-capture{background:#882000 !important;box-shadow:inset 0 0 0 2px rgba(255,50,0,0.8);}
+.cell.selected{background:#cc7020 !important;box-shadow:inset 0 0 0 3px rgba(255,215,0,0.9);}
+
+/* PIECES */
+.piece{width:78%;height:78%;border-radius:50%;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;position:relative;display:flex;align-items:center;justify-content:center;}
+.piece:hover{transform:scale(1.08);}
+.piece.red-piece{background:radial-gradient(circle at 35% 35%,#ff6644,#cc1100,#880000);border:2px solid rgba(255,255,255,0.15);box-shadow:0 3px 8px rgba(0,0,0,0.5),inset 0 1px 2px rgba(255,150,100,0.4);}
+.piece.black-piece{background:radial-gradient(circle at 35% 35%,#555,#222,#111);border:2px solid rgba(255,255,255,0.12);box-shadow:0 3px 8px rgba(0,0,0,0.5),inset 0 1px 2px rgba(255,255,255,0.1);}
+.piece.king::after{content:'♛';font-size:1.1em;color:rgba(255,215,0,0.95);text-shadow:0 0 6px rgba(255,215,0,0.8);line-height:1;}
+.piece.mine{cursor:pointer;}
+.piece.mine:hover{transform:scale(1.12);box-shadow:0 4px 12px rgba(0,0,0,0.6),0 0 0 2px rgba(255,215,0,0.7);}
+.piece.selected-piece{transform:scale(1.15) !important;box-shadow:0 4px 12px rgba(0,0,0,0.6),0 0 0 3px rgba(255,215,0,1) !important;}
+
+/* ROW/COL LABELS */
+.board-labels-col{display:flex;gap:0;position:absolute;top:-18px;left:0;right:0;}
+.board-labels-row{display:flex;flex-direction:column;gap:0;position:absolute;top:0;bottom:0;left:-18px;}
+.board-label{font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;}
+
+/* NOTIFICATIONS */
+#notifications{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:600;display:flex;flex-direction:column;gap:6px;pointer-events:none;width:min(90vw,380px);}
+.notif{background:rgba(0,0,0,0.88);border-radius:4px;padding:0.5rem 1rem;font-family:'Share Tech Mono',monospace;font-size:0.8rem;text-align:center;animation:notifAnim 2.5s forwards;backdrop-filter:blur(8px);}
+.notif.info{border:1px solid var(--green);color:var(--green);}
+.notif.warn{border:1px solid var(--warn);color:var(--warn);}
+.notif.gold{border:1px solid var(--gold);color:var(--gold);}
+.notif.red{border:1px solid var(--red-bright);color:var(--red-bright);}
+@keyframes notifAnim{0%{opacity:0;transform:translateY(-8px)}15%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0;transform:translateY(-5px)}}
+
+/* GAME OVER OVERLAY */
+#gameover-overlay{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+.gameover-icon{font-size:5rem;margin-bottom:1rem;animation:popIn 0.5s ease;}
+@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+.gameover-title{font-family:'Creepster',cursive;font-size:clamp(2.5rem,10vw,5rem);margin-bottom:0.5rem;text-shadow:0 0 30px currentColor;}
+.gameover-sub{font-family:'Share Tech Mono',monospace;font-size:0.9rem;color:rgba(255,255,255,0.5);margin-bottom:2rem;letter-spacing:0.1em;}
+.gameover-actions{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;}
+
+/* WAITING OVERLAY */
+#waiting-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.waiting-card{background:#0a0602;border:1px solid var(--border);border-radius:8px;padding:2rem;text-align:center;width:min(90vw,340px);}
+.waiting-spinner{font-size:2.5rem;animation:spin 1.5s linear infinite;margin-bottom:1rem;display:block;}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.waiting-text{font-family:'Share Tech Mono',monospace;color:rgba(255,255,255,0.5);font-size:0.85rem;letter-spacing:0.1em;}
+
+/* MOBILE sidebar collapse */
+@media(max-width:600px){
+  .game-sidebar{width:140px;min-width:120px;}
+  .player-name-txt{font-size:0.65rem;}
+  .chat-msg{font-size:0.6rem;}
+}
+@media(max-width:440px){
+  .game-layout{flex-direction:column;}
+  .game-sidebar{width:100%;height:auto;min-width:unset;flex-direction:row;border-right:none;border-bottom:1px solid var(--border);max-height:120px;}
+  .chat-wrapper{display:none;}
+  .btn-leave{margin:0.5rem;}
+  .board-area{flex:1;}
+}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--darker);}
+::-webkit-scrollbar-thumb{background:rgba(204,34,0,0.3);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen">
+  <div class="loading-logo">♟ DAMAS</div>
+  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+  <div class="loading-text">CARREGANDO TABULEIRO...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen hidden">
+  <div class="login-logo">♟ DAMAS</div>
+  <div class="login-sub">DAMAS ONLINE MULTIPLAYER</div>
+  <div class="login-box">
+    <div class="input-group">
+      <label>Seu Nick</label>
+      <input type="text" id="inp-username" placeholder="ex: DamasKing99" maxlength="16" autocomplete="username">
+    </div>
+    <div class="input-group">
+      <label>Senha</label>
+      <input type="password" id="inp-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="error-msg" id="login-error"></div>
+    <button class="btn btn-primary" id="btn-login">♟ ENTRAR</button>
+    <div class="divider">primeira vez?</div>
+    <button class="btn btn-secondary" id="btn-register">✚ CRIAR CONTA</button>
+  </div>
+  <div class="login-footer">Damas Brasileiras Online • 2 jogadores por partida</div>
+</div>
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen hidden">
+  <div class="lobby-header">
+    <div class="lobby-title">♟ DAMAS</div>
+    <div style="display:flex;gap:0.8rem;align-items:center">
+      <div class="player-badge"><div class="player-dot"></div><span id="lobby-username">Jogador</span></div>
+      <button class="btn btn-secondary" id="btn-logout" style="padding:0.4rem 0.8rem;font-size:0.75rem">SAIR</button>
+    </div>
+  </div>
+  <div class="lobby-body">
+    <div class="lobby-actions">
+      <button class="btn btn-primary" id="btn-create-public">⊕ SALA PÚBLICA</button>
+      <button class="btn btn-secondary" id="btn-create-private">🔒 SALA PRIVADA</button>
+    </div>
+    <div class="section-title">Salas Disponíveis</div>
+    <div class="rooms-grid" id="public-rooms-list"><div class="empty-rooms">[ Nenhuma sala — crie uma! ]</div></div>
+    <div class="section-title">Salas Privadas</div>
+    <div class="rooms-grid" id="private-rooms-list"><div class="empty-rooms">[ Nenhuma sala privada ]</div></div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen hidden">
+  <div class="game-layout">
+    <!-- SIDEBAR -->
+    <div class="game-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">♟ DAMAS</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Jogadores</div>
+        <div class="player-info-card" id="card-red">
+          <div class="player-piece-icon" style="background:radial-gradient(circle at 35% 35%,#ff6644,#cc1100,#880000)"></div>
+          <div>
+            <div class="player-name-txt" id="name-red">Vermelho</div>
+            <div class="player-count-txt" id="count-red">12 peças</div>
+          </div>
+        </div>
+        <div class="player-info-card" id="card-black">
+          <div class="player-piece-icon" style="background:radial-gradient(circle at 35% 35%,#555,#222,#111)"></div>
+          <div>
+            <div class="player-name-txt" id="name-black">Preto</div>
+            <div class="player-count-txt" id="count-black">12 peças</div>
+          </div>
+        </div>
+        <div class="turn-indicator" id="turn-indicator">Aguardando...</div>
+      </div>
+      <!-- CHAT -->
+      <div class="chat-wrapper">
+        <div class="chat-title-row">
+          <div class="chat-label">Chat da Partida</div>
+          <button id="chat-toggle-btn" title="Ocultar/Mostrar">−</button>
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-row">
+          <input id="chat-input" type="text" maxlength="80" placeholder="Mensagem...">
+          <button id="chat-send">▶</button>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-leave" id="btn-leave-game">← SAIR</button>
+    </div>
+    <!-- BOARD -->
+    <div class="board-area">
+      <div id="board-container">
+        <div id="board"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Waiting for opponent overlay -->
+  <div id="waiting-overlay" class="hidden">
+    <div class="waiting-card">
+      <span class="waiting-spinner">⏳</span>
+      <div style="font-family:'Creepster',cursive;font-size:1.5rem;color:var(--gold);margin-bottom:0.5rem">Aguardando Oponente</div>
+      <div class="waiting-text">Compartilhe a sala para jogar</div>
+      <div id="waiting-room-code" style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:rgba(255,255,255,0.3);margin-top:1rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER OVERLAY -->
+<div id="gameover-overlay" class="hidden">
+  <div class="gameover-icon" id="go-icon">🏆</div>
+  <div class="gameover-title" id="go-title">VITÓRIA!</div>
+  <div class="gameover-sub" id="go-sub">Você venceu a partida</div>
+  <div class="gameover-actions">
+    <button class="btn btn-primary" id="btn-rematch">♟ REVANCHE</button>
+    <button class="btn btn-secondary" id="btn-go-lobby">LOBBY</button>
+  </div>
+</div>
+
+<!-- MODAL: CRIAR SALA -->
+<div class="modal-overlay hidden" id="modal-create-room">
+  <div class="modal">
+    <div class="modal-title">Nova Sala</div>
+    <div class="input-group"><label>Nome da Sala</label><input type="text" id="inp-room-name" placeholder="ex: Desafio Final" maxlength="24"></div>
+    <div id="room-pw-wrap" class="input-group hidden"><label>Senha</label><input type="password" id="inp-room-password" placeholder="••••••••"></div>
+    <div class="error-msg" id="room-create-error"></div>
+    <button class="btn btn-primary" id="btn-confirm-create">CRIAR</button>
+    <button class="btn btn-secondary" id="btn-cancel-create">CANCELAR</button>
+  </div>
+</div>
+
+<!-- MODAL: SENHA PRIVADA -->
+<div class="modal-overlay hidden" id="modal-join-private">
+  <div class="modal">
+    <div class="modal-title">Sala Privada 🔒</div>
+    <div class="input-group"><label>Senha</label><input type="password" id="inp-join-password" placeholder="••••••••"></div>
+    <div class="error-msg" id="join-error"></div>
+    <button class="btn btn-primary" id="btn-confirm-join">ENTRAR</button>
+    <button class="btn btn-secondary" id="btn-cancel-join">CANCELAR</button>
+  </div>
+</div>
+
+<!-- MODAL: SALA DE ESPERA -->
+<div class="modal-overlay hidden" id="modal-waiting">
+  <div class="modal" style="text-align:center">
+    <div class="modal-title">SALA DE ESPERA</div>
+    <div id="wr-name" style="font-family:'Share Tech Mono',monospace;color:var(--gold);font-size:0.9rem;margin-bottom:1.5rem"></div>
+    <div id="wr-players" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.5rem"></div>
+    <div id="wr-status" style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:rgba(255,255,255,0.3);margin-bottom:1.5rem"></div>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btn-start-game">▶ INICIAR PARTIDA</button>
+      <button class="btn btn-secondary" id="btn-leave-waiting">SAIR</button>
+    </div>
+  </div>
+</div>
+
+<div id="notifications"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, set, get, push, onValue, off, update as dbUpdate, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyB1wIPxwFKH1Vys1pqnP4bR3CZQrnQ6msA",
+  authDomain:"jogo-5a65e.firebaseapp.com",
+  databaseURL:"https://jogo-5a65e-default-rtdb.firebaseio.com",
+  projectId:"jogo-5a65e",
+  storageBucket:"jogo-5a65e.firebasestorage.app",
+  messagingSenderId:"302390065206",
+  appId:"1:302390065206:web:0ca00f63244dfa343a8097"
+};
+const fbApp=initializeApp(firebaseConfig);
+const auth=getAuth(fbApp);
+const db=getDatabase(fbApp);
+
+// ── UTILS ─────────────────────────────────────────────────────
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id)?.classList.remove('hidden');}
+function showModal(id){document.getElementById(id)?.classList.remove('hidden');}
+function hideModal(id){document.getElementById(id)?.classList.add('hidden');}
+function setErr(id,m){const e=document.getElementById(id);if(e)e.textContent=m;}
+function clrErr(id){const e=document.getElementById(id);if(e)e.textContent='';}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function nickEmail(n){return n.toLowerCase().replace(/[^a-z0-9]/g,'x')+'@damas.game';}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);}
+function notify(msg,type='info'){const el=document.createElement('div');el.className=`notif ${type}`;el.textContent=msg;document.getElementById('notifications').appendChild(el);setTimeout(()=>el.remove(),2600);}
+
+// ── STATE ─────────────────────────────────────────────────────
+let currentUser=null,currentRoomId=null,currentRoom=null,isHost=false;
+let myColor=null; // 'red' or 'black'
+let roomListeners=[],chatListener=null,pendingJoin=null,isPrivateCreate=false;
+const MAX_PLAYERS=2;
+
+// ── AUTH ─────────────────────────────────────────────────────
+document.getElementById('btn-login').addEventListener('click',async()=>{
+  const nick=document.getElementById('inp-username').value.trim();
+  const pass=document.getElementById('inp-password').value;
+  clrErr('login-error');
+  if(!nick||nick.length<3) return setErr('login-error','⚠ Nick precisa de ao menos 3 letras');
+  if(!pass) return setErr('login-error','⚠ Digite sua senha');
+  try{await signInWithEmailAndPassword(auth,nickEmail(nick),pass);}
+  catch(e){
+    if(e.code==='auth/user-not-found'||e.code==='auth/invalid-credential') setErr('login-error','⚠ Nick não encontrado — crie uma conta');
+    else setErr('login-error','⚠ '+(authErrMsg[e.code]||e.code));
+  }
+});
+document.getElementById('btn-register').addEventListener('click',async()=>{
+  const nick=document.getElementById('inp-username').value.trim();
+  const pass=document.getElementById('inp-password').value;
+  clrErr('login-error');
+  if(!nick||nick.length<3) return setErr('login-error','⚠ Nick precisa de ao menos 3 letras');
+  if(!pass||pass.length<6) return setErr('login-error','⚠ Senha deve ter ao menos 6 caracteres');
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,nickEmail(nick),pass);
+    await updateProfile(cred.user,{displayName:nick});
+    await set(ref(db,`damas_users/${cred.user.uid}`),{username:nick,wins:0,losses:0,createdAt:Date.now()});
+  }catch(e){
+    if(e.code==='auth/email-already-in-use') setErr('login-error','⚠ Este nick já está em uso!');
+    else setErr('login-error','⚠ '+(authErrMsg[e.code]||e.code));
+  }
+});
+const authErrMsg={'auth/wrong-password':'Senha incorreta','auth/weak-password':'Senha muito fraca','auth/too-many-requests':'Muitas tentativas — aguarde'};
+document.getElementById('btn-logout').addEventListener('click',async()=>{await leaveCurrentRoom();await signOut(auth);});
+
+onAuthStateChanged(auth,user=>{
+  document.getElementById('screen-loading').classList.add('hidden');
+  if(user){currentUser=user;document.getElementById('lobby-username').textContent=user.displayName||'Jogador';showScreen('screen-lobby');startRoomListeners();}
+  else{currentUser=null;cleanupListeners();showScreen('screen-login');}
+});
+setTimeout(()=>{if(!currentUser){document.getElementById('screen-loading').classList.add('hidden');showScreen('screen-login');}},3000);
+
+// ── LOBBY / ROOMS ─────────────────────────────────────────────
+function startRoomListeners(){
+  cleanupListeners();
+  const r=ref(db,'damas_rooms');
+  const fn=onValue(r,snap=>{
+    const pubEl=document.getElementById('public-rooms-list');
+    const privEl=document.getElementById('private-rooms-list');
+    pubEl.innerHTML=''; privEl.innerHTML='';
+    if(!snap.exists()){
+      pubEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala — crie uma! ]</div>';
+      privEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala privada ]</div>';
+      return;
+    }
+    let pc=0,vc=0;
+    Object.entries(snap.val()).forEach(([id,room])=>{
+      const cnt=room.players?Object.keys(room.players).length:0;
+      const full=cnt>=MAX_PLAYERS;
+      const card=makeRoomCard(id,room,cnt,full);
+      if(room.isPrivate){privEl.appendChild(card);vc++;}
+      else{pubEl.appendChild(card);pc++;}
+    });
+    if(!pc) pubEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala — crie uma! ]</div>';
+    if(!vc) privEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala privada ]</div>';
+  });
+  roomListeners.push({ref:r,fn});
+}
+function cleanupListeners(){roomListeners.forEach(({ref:r,fn})=>off(r,'value',fn));roomListeners=[];}
+
+function makeRoomCard(id,room,cnt,full){
+  const card=document.createElement('div');
+  card.className='room-card'+(full?' full':'');
+  const playing=room.state==='playing';
+  const statusCls=playing?'status-playing':'status-waiting';
+  const statusTxt=playing?'EM JOGO':'AGUARDANDO';
+  card.innerHTML=`
+    <div>
+      <div class="room-name">${escapeHtml(room.name)}</div>
+      <div class="room-meta">Host: ${escapeHtml(room.hostName||'?')} · ${cnt}/${MAX_PLAYERS} jogadores</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <span class="room-status ${statusCls}">${statusTxt}</span>
+      ${room.isPrivate?'<span style="color:var(--warn);font-size:0.9rem">🔒</span>':''}
+    </div>`;
+  if(!full&&!playing) card.addEventListener('click',()=>tryJoinRoom(id,room));
+  return card;
+}
+
+// ── CREATE ROOM ──────────────────────────────────────────────
+document.getElementById('btn-create-public').addEventListener('click',()=>{
+  isPrivateCreate=false;
+  document.getElementById('room-pw-wrap').classList.add('hidden');
+  document.getElementById('inp-room-name').value='';
+  clrErr('room-create-error'); showModal('modal-create-room');
+});
+document.getElementById('btn-create-private').addEventListener('click',()=>{
+  isPrivateCreate=true;
+  document.getElementById('room-pw-wrap').classList.remove('hidden');
+  document.getElementById('inp-room-name').value='';
+  document.getElementById('inp-room-password').value='';
+  clrErr('room-create-error'); showModal('modal-create-room');
+});
+document.getElementById('btn-cancel-create').addEventListener('click',()=>hideModal('modal-create-room'));
+document.getElementById('btn-confirm-create').addEventListener('click',async()=>{
+  const name=document.getElementById('inp-room-name').value.trim();
+  const pw=isPrivateCreate?document.getElementById('inp-room-password').value:'';
+  clrErr('room-create-error');
+  if(!name) return setErr('room-create-error','⚠ Digite um nome');
+  if(isPrivateCreate&&!pw) return setErr('room-create-error','⚠ Digite uma senha');
+  try{await createRoom(name,isPrivateCreate,pw);hideModal('modal-create-room');}
+  catch(e){setErr('room-create-error','⚠ '+e.message);}
+});
+
+async function createRoom(name,isPrivate,pw){
+  if(!currentUser) throw new Error('Não autenticado');
+  const rRef=push(ref(db,'damas_rooms'));const rid=rRef.key;
+  const data={id:rid,name,isPrivate,password:isPrivate?hashStr(pw):'',
+    host:currentUser.uid,hostName:currentUser.displayName||'Host',
+    players:{[currentUser.uid]:{uid:currentUser.uid,name:currentUser.displayName||'Jogador',color:'red',joinedAt:Date.now()}},
+    state:'waiting',createdAt:Date.now(),maxPlayers:MAX_PLAYERS,
+    board:null,turn:'red',moveCount:0};
+  await set(rRef,data);
+  currentRoomId=rid; isHost=true; myColor='red';
+  await attachRoom(rid); enterWaiting(data);
+}
+
+// ── JOIN ROOM ─────────────────────────────────────────────────
+async function tryJoinRoom(id,room){
+  if(room.isPrivate){pendingJoin={id,room};document.getElementById('inp-join-password').value='';clrErr('join-error');showModal('modal-join-private');}
+  else await doJoin(id,room);
+}
+document.getElementById('btn-confirm-join').addEventListener('click',async()=>{
+  if(!pendingJoin) return;
+  if(hashStr(document.getElementById('inp-join-password').value)!==pendingJoin.room.password) return setErr('join-error','⚠ Senha incorreta!');
+  hideModal('modal-join-private'); await doJoin(pendingJoin.id,pendingJoin.room); pendingJoin=null;
+});
+document.getElementById('btn-cancel-join').addEventListener('click',()=>{hideModal('modal-join-private');pendingJoin=null;});
+
+async function doJoin(id,room){
+  if(!currentUser) return;
+  const cnt=room.players?Object.keys(room.players).length:0;
+  if(cnt>=MAX_PLAYERS) return notify('Sala cheia!','warn');
+  await dbUpdate(ref(db,`damas_rooms/${id}/players/${currentUser.uid}`),{
+    uid:currentUser.uid,name:currentUser.displayName||'Jogador',color:'black',joinedAt:Date.now()
+  });
+  currentRoomId=id; isHost=false; myColor='black';
+  await attachRoom(id); enterWaiting(room);
+}
+
+// ── ROOM LISTENER ─────────────────────────────────────────────
+async function attachRoom(rid){
+  onDisconnect(ref(db,`damas_rooms/${rid}/players/${currentUser.uid}`)).remove();
+  const rRef=ref(db,`damas_rooms/${rid}`);
+  const fn=onValue(rRef,snap=>{
+    if(!snap.exists()){
+      currentRoom=null;currentRoomId=null;isHost=false;myColor=null;
+      hideModal('modal-waiting'); notify('Sala encerrada','warn'); showScreen('screen-lobby'); startRoomListeners(); return;
+    }
+    const prev=currentRoom;
+    currentRoom=snap.val();
+    // Opponent joined → update waiting room UI
+    updateWaiting(currentRoom);
+    // Game started
+    if(currentRoom.state==='playing'){
+      hideModal('modal-waiting');
+      if(!document.getElementById('screen-game').classList.contains('hidden')===false){
+        showScreen('screen-game');
+      }
+      showScreen('screen-game');
+      renderBoard(currentRoom.board);
+      updateGameUI();
+    }
+  });
+  roomListeners.push({ref:rRef,fn});
+}
+
+async function leaveCurrentRoom(){
+  if(!currentRoomId||!currentUser) return;
+  const rid=currentRoomId;
+  await remove(ref(db,`damas_rooms/${rid}/players/${currentUser.uid}`));
+  if(isHost){
+    const s=await get(ref(db,`damas_rooms/${rid}/players`));
+    if(!s.exists()||!Object.keys(s.val()).length) await remove(ref(db,`damas_rooms/${rid}`));
+    else{const pl=s.val(),nh=Object.keys(pl)[0];await dbUpdate(ref(db,`damas_rooms/${rid}`),{host:nh,hostName:pl[nh].name,state:'waiting',board:null,turn:'red'});}
+  }
+  if(chatListener){off(chatListener.ref,'value',chatListener.fn);chatListener=null;}
+  currentRoomId=null;currentRoom=null;isHost=false;myColor=null;
+}
+
+// ── WAITING ROOM UI ───────────────────────────────────────────
+function enterWaiting(room){
+  document.getElementById('wr-name').textContent='♟ '+room.name;
+  updateWaiting(room); showModal('modal-waiting');
+}
+function updateWaiting(room){
+  const players=room.players||{};
+  const list=document.getElementById('wr-players'); list.innerHTML='';
+  Object.values(players).forEach(p=>{
+    const isRed=p.color==='red';
+    const d=document.createElement('div'); d.className='waiting-player';
+    const pieceColor=isRed
+      ?'background:radial-gradient(circle at 35% 35%,#ff6644,#cc1100,#880000)'
+      :'background:radial-gradient(circle at 35% 35%,#555,#222,#111)';
+    const label=isRed?'Vermelho':'Preto';
+    d.innerHTML=`<div class="piece-preview" style="${pieceColor}"></div><span style="flex:1">${escapeHtml(p.name)}</span><span style="font-size:0.7rem;opacity:0.4">${label}${p.uid===room.host?' 👑':''}</span>`;
+    list.appendChild(d);
+  });
+  const cnt=Object.keys(players).length;
+  document.getElementById('wr-status').textContent=`${cnt}/2 jogadores`;
+  const sb=document.getElementById('btn-start-game');
+  const canStart=currentUser&&room.host===currentUser.uid&&cnt===2;
+  sb.style.display=canStart?'block':'none';
+}
+document.getElementById('btn-start-game').addEventListener('click',async()=>{
+  if(!currentRoomId) return;
+  const board=initBoard();
+  await dbUpdate(ref(db,`damas_rooms/${currentRoomId}`),{state:'playing',board:boardToFirebase(board),turn:'red',moveCount:0,startedAt:Date.now()});
+  initChat(currentRoomId);
+});
+document.getElementById('btn-leave-waiting').addEventListener('click',async()=>{
+  hideModal('modal-waiting'); await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
+});
+document.getElementById('btn-leave-game').addEventListener('click',async()=>{
+  document.getElementById('gameover-overlay').classList.add('hidden');
+  await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
+});
+
+// ── CHECKERS LOGIC ────────────────────────────────────────────
+// Board: 8x8 array. Each cell: null | {color:'red'|'black', king:bool}
+// Red moves UP (row decreases), Black moves DOWN (row increases)
+// Red starts at rows 5-7, Black at rows 0-2
+
+function initBoard(){
+  const b=Array.from({length:8},()=>Array(8).fill(null));
+  for(let r=0;r<3;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]={color:'black',king:false};
+  for(let r=5;r<8;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]={color:'red',king:false};
+  return b;
+}
+
+function boardToFirebase(b){
+  // Serialize 8x8 to flat string: '.' empty, 'r' red, 'R' red king, 'b' black, 'B' black king
+  return b.map(row=>row.map(cell=>{
+    if(!cell) return '.';
+    if(cell.color==='red') return cell.king?'R':'r';
+    return cell.king?'B':'b';
+  }).join('')).join('|');
+}
+function boardFromFirebase(s){
+  if(!s) return initBoard();
+  return s.split('|').map(row=>row.split('').map(c=>{
+    if(c==='.') return null;
+    if(c==='r') return{color:'red',king:false};
+    if(c==='R') return{color:'red',king:true};
+    if(c==='b') return{color:'black',king:false};
+    if(c==='B') return{color:'black',king:true};
+    return null;
+  }));
+}
+
+// Get all valid moves for a piece at (r,c) on board b
+function getPieceMoves(b,r,c,mustCapture){
+  const piece=b[r][c]; if(!piece) return [];
+  const dirs=[];
+  if(piece.color==='red'||piece.king) dirs.push([-1,-1],[-1,1]); // red moves up
+  if(piece.color==='black'||piece.king) dirs.push([1,-1],[1,1]); // black moves down
+  const moves=[];
+  for(const [dr,dc] of dirs){
+    const nr=r+dr,nc=c+dc;
+    if(!inBounds(nr,nc)) continue;
+    if(!b[nr][nc]&&!mustCapture){
+      moves.push({type:'move',from:[r,c],to:[nr,nc],captures:[]});
+    } else if(b[nr][nc]&&b[nr][nc].color!==piece.color){
+      const jr=r+dr*2,jc=c+dc*2;
+      if(inBounds(jr,jc)&&!b[jr][jc]){
+        moves.push({type:'capture',from:[r,c],to:[jr,jc],captures:[[nr,nc]]});
+      }
+    }
+  }
+  return moves;
+}
+
+function inBounds(r,c){return r>=0&&r<8&&c>=0&&c<8;}
+
+// Get all valid moves for a color, enforcing mandatory capture
+function getAllMoves(b,color){
+  const captures=[];const moves=[];
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(b[r][c]?.color!==color) continue;
+    const pm=getPieceMoves(b,r,c,false);
+    pm.forEach(m=>{ if(m.type==='capture') captures.push(m); else moves.push(m); });
+  }
+  return captures.length>0?captures:moves; // must capture rule
+}
+
+// Check if a capture chain can continue after a jump
+function getContinuations(b,r,c){
+  const moves=getPieceMoves(b,r,c,true);
+  return moves.filter(m=>m.type==='capture');
+}
+
+// Apply a move to a copy of the board, return new board
+function applyMove(b,move){
+  const nb=b.map(row=>row.map(cell=>cell?{...cell}:null));
+  const [fr,fc]=move.from,[tr,tc]=move.to;
+  nb[tr][tc]=nb[fr][fc]; nb[fr][fc]=null;
+  move.captures.forEach(([cr,cc])=>{ nb[cr][cc]=null; });
+  // King promotion
+  if(nb[tr][tc].color==='red'&&tr===0) nb[tr][tc].king=true;
+  if(nb[tr][tc].color==='black'&&tr===7) nb[tr][tc].king=true;
+  return nb;
+}
+
+function countPieces(b){
+  let red=0,black=0;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(b[r][c]?.color==='red') red++;
+    else if(b[r][c]?.color==='black') black++;
+  }
+  return{red,black};
+}
+
+function checkWin(b,lastTurn){
+  const counts=countPieces(b);
+  if(counts.red===0) return 'black';
+  if(counts.black===0) return 'red';
+  // No moves = lose
+  const nextTurn=lastTurn==='red'?'black':'red';
+  if(getAllMoves(b,nextTurn).length===0) return lastTurn;
+  return null;
+}
+
+// ── BOARD RENDER ──────────────────────────────────────────────
+let currentBoard=null;
+let selectedCell=null; // [r,c]
+let validMoves=[];     // current valid moves from selected piece
+let mustCaptureFrom=null; // [r,c] if mid-chain capture
+
+function renderBoard(boardData){
+  if(!boardData) return;
+  currentBoard=boardFromFirebase(boardData);
+  const boardEl=document.getElementById('board');
+  // Calculate cell size based on available space
+  const area=document.querySelector('.board-area');
+  const maxW=area.clientWidth-32, maxH=area.clientHeight-32;
+  const size=Math.min(maxW,maxH);
+  const cellSize=Math.floor(size/8);
+  boardEl.style.width=cellSize*8+'px';
+  boardEl.style.height=cellSize*8+'px';
+  boardEl.style.gridTemplateColumns=`repeat(8,${cellSize}px)`;
+
+  // Determine valid moves for current player
+  const myTurn=currentRoom?.turn===myColor;
+  const allMoves=myTurn?getAllMoves(currentBoard,myColor):[];
+  // Force captures from chain piece if mid-chain
+  const forcedCaptures=mustCaptureFrom?getContinuations(currentBoard,mustCaptureFrom[0],mustCaptureFrom[1]):null;
+  const effectiveMoves=forcedCaptures||allMoves;
+
+  boardEl.innerHTML='';
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const cell=document.createElement('div');
+    const isDark=(r+c)%2===1;
+    cell.className='cell '+(isDark?'dark':'light');
+    cell.dataset.r=r; cell.dataset.c=c;
+    // Highlight states
+    const isSelected=selectedCell&&selectedCell[0]===r&&selectedCell[1]===c;
+    const isMoveDest=selectedCell&&effectiveMoves.some(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c);
+    const isCaptureDest=isMoveDest&&effectiveMoves.find(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c)?.type==='capture';
+    if(isSelected) cell.classList.add('selected');
+    else if(isCaptureDest) cell.classList.add('highlight-capture');
+    else if(isMoveDest) cell.classList.add('highlight-move');
+    // Piece
+    const piece=currentBoard[r][c];
+    if(piece){
+      const pieceEl=document.createElement('div');
+      pieceEl.className='piece '+(piece.color==='red'?'red-piece':'black-piece')+(piece.king?' king':'');
+      const canSelect=myTurn&&piece.color===myColor&&isDark&&(!mustCaptureFrom||(mustCaptureFrom[0]===r&&mustCaptureFrom[1]===c));
+      const isMovable=effectiveMoves.some(m=>m.from[0]===r&&m.from[1]===c);
+      if(canSelect&&isMovable) pieceEl.classList.add('mine');
+      if(isSelected) pieceEl.classList.add('selected-piece');
+      pieceEl.addEventListener('click',()=>onPieceClick(r,c,effectiveMoves));
+      cell.appendChild(pieceEl);
+    }
+    // Cell click for move destination
+    if(isDark) cell.addEventListener('click',()=>onCellClick(r,c,effectiveMoves));
+    boardEl.appendChild(cell);
+  }
+}
+
+function onPieceClick(r,c,effectiveMoves){
+  const myTurn=currentRoom?.turn===myColor;
+  if(!myTurn) return;
+  const piece=currentBoard[r][c];
+  // Click own piece → select
+  if(piece&&piece.color===myColor){
+    const canSelect=effectiveMoves.some(m=>m.from[0]===r&&m.from[1]===c);
+    if(!canSelect) return;
+    if(mustCaptureFrom&&!(mustCaptureFrom[0]===r&&mustCaptureFrom[1]===c)) return;
+    selectedCell=[r,c];
+    renderBoard(currentRoom.board);
+    return;
+  }
+  // Click enemy piece → check if capture destination
+  onCellClick(r,c,effectiveMoves);
+}
+
+function onCellClick(r,c,effectiveMoves){
+  const myTurn=currentRoom?.turn===myColor;
+  if(!myTurn||!selectedCell) return;
+  const move=effectiveMoves.find(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c);
+  if(!move) return;
+  commitMove(move);
+}
+
+async function commitMove(move){
+  if(!currentRoomId||!currentRoom) return;
+  let nb=applyMove(currentBoard,move);
+  // Check for capture chain
+  let nextTurn=currentRoom.turn==='red'?'black':'red';
+  let chainCapture=null;
+  if(move.type==='capture'){
+    const cont=getContinuations(nb,move.to[0],move.to[1]);
+    if(cont.length>0){
+      // Same player must continue capturing
+      nextTurn=currentRoom.turn;
+      chainCapture=[move.to[0],move.to[1]];
+    }
+  }
+  mustCaptureFrom=chainCapture; selectedCell=null;
+  // Check win
+  const winner=checkWin(nb,currentRoom.turn);
+  const newMoveCount=(currentRoom.moveCount||0)+1;
+  await dbUpdate(ref(db,`damas_rooms/${currentRoomId}`),{
+    board:boardToFirebase(nb),
+    turn:nextTurn,
+    moveCount:newMoveCount,
+    chainCapture:chainCapture?`${chainCapture[0]},${chainCapture[1]}`:null,
+    winner:winner||null,
+    state:winner?'finished':'playing',
+  });
+  if(winner) showGameOver(winner);
+}
+
+// ── GAME UI UPDATE ────────────────────────────────────────────
+function updateGameUI(){
+  if(!currentRoom||!currentBoard) return;
+  const b=boardFromFirebase(currentRoom.board);
+  const counts=countPieces(b);
+  const players=currentRoom.players||{};
+  // Find player names by color
+  let redName='Vermelho',blackName='Preto';
+  Object.values(players).forEach(p=>{
+    if(p.color==='red') redName=p.name;
+    else if(p.color==='black') blackName=p.name;
+  });
+  document.getElementById('name-red').textContent=redName;
+  document.getElementById('name-black').textContent=blackName;
+  document.getElementById('count-red').textContent=counts.red+' peças';
+  document.getElementById('count-black').textContent=counts.black+' peças';
+  // Turn indicator
+  const myTurn=currentRoom.turn===myColor;
+  const turnName=currentRoom.turn==='red'?redName:blackName;
+  const turnEl=document.getElementById('turn-indicator');
+  turnEl.textContent=myTurn?'▶ SUA VEZ':'⏳ '+turnName+'...';
+  turnEl.className='turn-indicator '+(myTurn?'turn-mine':'turn-enemy');
+  // Highlight player cards
+  document.getElementById('card-red').className='player-info-card'+(currentRoom.turn==='red'?' my-turn':' not-turn');
+  document.getElementById('card-black').className='player-info-card'+(currentRoom.turn==='black'?' my-turn':' not-turn');
+  // Chain capture state
+  if(currentRoom.chainCapture){
+    const parts=currentRoom.chainCapture.split(',');
+    mustCaptureFrom=[parseInt(parts[0]),parseInt(parts[1])];
+  } else {
+    mustCaptureFrom=null;
+  }
+  // Waiting overlay
+  const cnt=Object.keys(players).length;
+  const waitEl=document.getElementById('waiting-overlay');
+  if(cnt<2&&currentRoom.state!=='finished') waitEl.classList.remove('hidden');
+  else waitEl.classList.add('hidden');
+  document.getElementById('waiting-room-code').textContent=currentRoom.name;
+  // Re-render board with updated moves
+  if(currentRoom.board) renderBoard(currentRoom.board);
+  // Check winner from firebase
+  if(currentRoom.winner&&!document.getElementById('gameover-overlay').classList.contains('hidden')===false){
+    showGameOver(currentRoom.winner);
+  }
+}
+
+function showGameOver(winner){
+  const myWin=winner===myColor;
+  const el=document.getElementById('gameover-overlay');
+  document.getElementById('go-icon').textContent=myWin?'🏆':'💀';
+  document.getElementById('go-title').textContent=myWin?'VITÓRIA!':'DERROTA';
+  document.getElementById('go-title').style.color=myWin?'var(--gold)':'var(--red-bright)';
+  document.getElementById('go-sub').textContent=myWin?'Você dominou o tabuleiro!':'Seu oponente venceu esta vez...';
+  el.classList.remove('hidden');
+  // Update stats
+  if(currentUser){
+    const field=myWin?{wins:1}:{losses:1};
+    get(ref(db,`damas_users/${currentUser.uid}`)).then(s=>{
+      if(s.exists()){
+        const d=s.val();
+        dbUpdate(ref(db,`damas_users/${currentUser.uid}`),{
+          wins:(d.wins||0)+(myWin?1:0),
+          losses:(d.losses||0)+(myWin?0:1),
+        });
+      }
+    });
+  }
+}
+
+document.getElementById('btn-rematch').addEventListener('click',async()=>{
+  document.getElementById('gameover-overlay').classList.add('hidden');
+  if(!currentRoomId) return;
+  if(isHost){
+    const board=initBoard();
+    await dbUpdate(ref(db,`damas_rooms/${currentRoomId}`),{
+      state:'playing',board:boardToFirebase(board),
+      turn:'red',moveCount:0,winner:null,chainCapture:null,startedAt:Date.now()
+    });
+  } else {
+    notify('Aguardando host iniciar revanche...','info');
+  }
+});
+document.getElementById('btn-go-lobby').addEventListener('click',async()=>{
+  document.getElementById('gameover-overlay').classList.add('hidden');
+  await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
+});
+
+// ── CHAT ─────────────────────────────────────────────────────
+let chatVisible=true;
+function initChat(roomId){
+  const msgs=document.getElementById('chat-messages');
+  msgs.innerHTML='';
+  if(chatListener){off(chatListener.ref,'value',chatListener.fn);chatListener=null;}
+  const cRef=ref(db,`damas_rooms/${roomId}/chat`);
+  const fn=onValue(cRef,snap=>{
+    msgs.innerHTML='';
+    if(!snap.exists()) return;
+    Object.values(snap.val()).sort((a,b)=>a.ts-b.ts).forEach(m=>appendMsg(m));
+    msgs.scrollTop=msgs.scrollHeight;
+  });
+  chatListener={ref:cRef,fn};
+  document.getElementById('chat-send').onclick=sendChat;
+  document.getElementById('chat-input').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat();}};
+  document.getElementById('chat-toggle-btn').onclick=()=>{
+    chatVisible=!chatVisible;
+    const w=document.querySelector('.chat-wrapper');
+    document.getElementById('chat-messages').style.display=chatVisible?'':'none';
+    document.getElementById('chat-input-row').style.display=chatVisible?'':'none';
+    document.getElementById('chat-toggle-btn').textContent=chatVisible?'−':'+';
+  };
+  // system message
+  push(ref(db,`damas_rooms/${roomId}/chat`),{uid:'sys',nick:'',text:'Partida iniciada! Que ganhe o melhor ♟',color:'#fff',ts:Date.now(),system:true});
+}
+async function sendChat(){
+  if(!currentRoomId||!currentUser) return;
+  const inp=document.getElementById('chat-input');
+  const text=inp.value.trim(); if(!text) return; inp.value='';
+  const myPieceColor=myColor==='red'?'#FF4422':'#AAAAAA';
+  await push(ref(db,`damas_rooms/${currentRoomId}/chat`),{
+    uid:currentUser.uid,nick:currentUser.displayName||'?',text,color:myPieceColor,ts:Date.now(),system:false
+  });
+}
+function appendMsg(m){
+  const el=document.createElement('div');
+  el.className='chat-msg'+(m.system?' system':'');
+  el.style.borderLeftColor=m.system?'rgba(255,255,255,0.1)':m.color;
+  el.innerHTML=m.system?escapeHtml(m.text):`<span class="chat-nick" style="color:${m.color}">${escapeHtml(m.nick)}</span>${escapeHtml(m.text)}`;
+  document.getElementById('chat-messages').appendChild(el);
+}
+
+// ── WINDOW RESIZE ─────────────────────────────────────────────
+window.addEventListener('resize',()=>{
+  if(currentRoom?.board) renderBoard(currentRoom.board);
+});
+
+// ── WAIT FOR GAME STATE UPDATE → init chat on game start ──────
+// (initiated from the room listener when state changes to 'playing')
+// We need to also init chat for the joining player
+function onGameStart(room){
+  initChat(currentRoomId);
+  showScreen('screen-game');
+  updateGameUI();
+}
+
+// Patch attachRoom to call onGameStart
+// (already handled in onValue callback above, let's make sure it calls initChat)
+// Override: when state becomes playing and we just switched to game screen, init chat
+// Done above in the attachRoom listener already.
+
+// ── INIT CHAT WHEN JOINING GAME THAT'S ALREADY STARTED ────────
+// This is handled in the room listener; when state===playing → showScreen game + updateGameUI
+// initChat called from btn-start-game AND from the listener when guest sees state change
+
+// Patch: non-host should also init chat
+const _origAttach=attachRoom;
+
+// Actually we need to call initChat from the room value listener for non-host
+// Let's add a flag
+let chatInitialized=false;
+// Find the room listener fn and patch it
+// Since we can't easily patch, let's use a separate listener check approach
+// Instead, we'll call initChat from updateGameUI when chat not initialized
+function ensureChatInitialized(){
+  if(!chatInitialized&&currentRoomId&&currentRoom?.state==='playing'){
+    chatInitialized=true; initChat(currentRoomId);
+  }
+}
+
+// Patch updateGameUI to call ensureChatInitialized
+const _origUpdateGameUI=updateGameUI;
+// We'll just add the call directly since JS is single-file
+// Already handled: btn-start-game calls initChat, guest enters via the room listener
+// For guest: when state becomes 'playing' first time, the listener calls showScreen('screen-game')
+// and then updateGameUI() - let's add ensureChatInitialized there
+
+// Direct approach: mutate the room onValue handler
+// Since we can't cleanly do that, let's instead override the listener to call initChat
+// We'll add a global hook
+window._onRoomStateChange=function(room){
+  if(room.state==='playing'&&!chatInitialized){
+    chatInitialized=true; initChat(currentRoomId);
+  }
+};
+
+// And call it from inside the room listener we already have
+// We need to modify the snapshot handler - let's add a MutationObserver on screen-game
+// SIMPLEST: just add window._onRoomStateChange call inside the existing listener
+// Since we declared it above attachRoom, and the listener fn uses currentRoom,
+// we can just call ensureChatInitialized() every time updateGameUI() is called
+
+// Let's just inline it at the end of the updateGameUI function
+// Redefine updateGameUI to include chat init
+const baseUpdateGameUI=updateGameUI;
+
+// Call chat init when screen-game is shown
+const observer=new MutationObserver(()=>{
+  if(!document.getElementById('screen-game').classList.contains('hidden')){
+    ensureChatInitialized();
+  }
+});
+observer.observe(document.getElementById('screen-game'),{attributes:true,attributeFilter:['class']});
+
+// Reset chatInitialized on leave
+const _origLeave=leaveCurrentRoom;
+async function leaveCurrentRoomPatched(){
+  chatInitialized=false; await leaveCurrentRoom();
+}
+document.getElementById('btn-leave-game').removeEventListener('click',()=>{});
+document.getElementById('btn-leave-game').addEventListener('click',async()=>{
+  document.getElementById('gameover-overlay').classList.add('hidden');
+  chatInitialized=false;
+  await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
+});
+document.getElementById('btn-go-lobby').removeEventListener('click',()=>{});
+document.getElementById('btn-go-lobby').addEventListener('click',async()=>{
+  document.getElementById('gameover-overlay').classList.add('hidden');
+  chatInitialized=false;
+  await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
+});
+</script>
+</body>
+</html>
