@@ -630,6 +630,20 @@ const app=initializeApp({
 });
 const auth=getAuth(app),db=getDatabase(app);
 
+// ── Utils ──────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const n2m=n=>n.toLowerCase().replace(/[^a-z0-9]/g,'x')+'@damas.game';
+const hpw=s=>{let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);};
+function scrShow(id){['scr-load','scr-login','scr-menu','scr-rooms','scr-game','scr-shop','scr-rank'].forEach(s=>$(s)&&$(s).classList.add('hidden'));$(id).classList.remove('hidden');}
+function scrShowAll(id){scrShow(id);}
+function mShow(id){$(id).classList.remove('hidden');}
+function mHide(id){$(id).classList.add('hidden');}
+function notify(msg,type='ok'){
+  const el=document.createElement('div');el.className=`notif ${type}`;el.textContent=msg;
+  $('notifs').appendChild(el);setTimeout(()=>el.remove(),2800);
+}
+
 // ── State ──────────────────────────────────────────────────────
 let ME=null,RID=null,RDATA=null,HOST=false,MYCOLOR=null;
 let unsubRoom=null,unsubLobby=null,unsubChat=null;
@@ -1128,7 +1142,7 @@ function updateMenuProfile(){
 }
 
 // ── SHOP ──────────────────────────────────────────────────────
-function scrShowAll(id){['scr-load','scr-login','scr-menu','scr-rooms','scr-game','scr-shop','scr-rank'].forEach(s=>$(s)&&$(s).classList.add('hidden'));$(id).classList.remove('hidden');}
+
 
 function buildShop(){
   ['paises','especiais'].forEach(sec=>{
@@ -1178,19 +1192,6 @@ function buildShop(){
 
 $('btn-shop').onclick=()=>{playBtnClick();buildShop();scrShowAll('scr-shop');};
 $('btn-back-shop').onclick=()=>{playBtnClick();scrShowAll('scr-menu');};
-
-// ── Utils ──────────────────────────────────────────────────────
-const $=id=>document.getElementById(id);
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const n2m=n=>n.toLowerCase().replace(/[^a-z0-9]/g,'x')+'@damas.game';
-const hpw=s=>{let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);};
-function scrShow(id){['scr-load','scr-login','scr-menu','scr-rooms','scr-game','scr-shop','scr-rank'].forEach(s=>$(s)&&$(s).classList.add('hidden'));$(id).classList.remove('hidden');}
-function mShow(id){$(id).classList.remove('hidden');}
-function mHide(id){$(id).classList.add('hidden');}
-function notify(msg,type='ok'){
-  const el=document.createElement('div');el.className=`notif ${type}`;el.textContent=msg;
-  $('notifs').appendChild(el);setTimeout(()=>el.remove(),2800);
-}
 
 // ── Auth ───────────────────────────────────────────────────────
 $('btn-login').onclick=async()=>{
