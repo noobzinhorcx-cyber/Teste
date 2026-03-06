@@ -357,672 +357,505 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, set, get, push, onValue, off, update as dbUpdate, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+         onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, set, get, push, onValue, off,
+         update as dbUpdate, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-const firebaseConfig={
+const FB = initializeApp({
   apiKey:"AIzaSyB1wIPxwFKH1Vys1pqnP4bR3CZQrnQ6msA",
   authDomain:"jogo-5a65e.firebaseapp.com",
   databaseURL:"https://jogo-5a65e-default-rtdb.firebaseio.com",
-  projectId:"jogo-5a65e",
-  storageBucket:"jogo-5a65e.firebasestorage.app",
-  messagingSenderId:"302390065206",
-  appId:"1:302390065206:web:0ca00f63244dfa343a8097"
-};
-const fbApp=initializeApp(firebaseConfig);
-const auth=getAuth(fbApp);
-const db=getDatabase(fbApp);
+  projectId:"jogo-5a65e", storageBucket:"jogo-5a65e.firebasestorage.app",
+  messagingSenderId:"302390065206", appId:"1:302390065206:web:0ca00f63244dfa343a8097"
+});
+const auth = getAuth(FB);
+const db   = getDatabase(FB);
+
+// ── GLOBALS ──────────────────────────────────────────────────
+let ME = null;           // firebase user
+let roomId = null;       // current room key
+let roomData = null;     // latest room snapshot value
+let amHost = false;
+let myColor = null;      // 'red' | 'black'
+let unsub_room = null;   // unsubscribe fn for room listener
+let unsub_lobby = null;  // unsubscribe fn for lobby listener
+let unsub_chat = null;   // unsubscribe fn for chat listener
+let selectedCell = null; // [r,c] currently selected piece
+let mustFrom = null;     // [r,c] forced capture chain piece
+let board = null;        // current 8x8 board array
 
 // ── UTILS ─────────────────────────────────────────────────────
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id)?.classList.remove('hidden');}
-function showModal(id){document.getElementById(id)?.classList.remove('hidden');}
-function hideModal(id){document.getElementById(id)?.classList.add('hidden');}
-function setErr(id,m){const e=document.getElementById(id);if(e)e.textContent=m;}
-function clrErr(id){const e=document.getElementById(id);if(e)e.textContent='';}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function nickEmail(n){return n.toLowerCase().replace(/[^a-z0-9]/g,'x')+'@damas.game';}
-function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);}
-function notify(msg,type='info'){const el=document.createElement('div');el.className=`notif ${type}`;el.textContent=msg;document.getElementById('notifications').appendChild(el);setTimeout(()=>el.remove(),2600);}
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nick2mail = n => n.toLowerCase().replace(/[^a-z0-9]/g,'x')+'@damas.game';
+const hashPw = s => { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return h.toString(36); };
 
-// ── STATE ─────────────────────────────────────────────────────
-let currentUser=null,currentRoomId=null,currentRoom=null,isHost=false;
-let myColor=null; // 'red' or 'black'
-let roomListeners=[],chatListener=null,pendingJoin=null,isPrivateCreate=false;
-const MAX_PLAYERS=2;
+function screen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden')); $(id).classList.remove('hidden'); }
+function modal(id)  { $(id).classList.remove('hidden'); }
+function unmodal(id){ $(id).classList.add('hidden'); }
+function notify(msg, type='info'){
+  const el=document.createElement('div'); el.className=`notif ${type}`; el.textContent=msg;
+  $('notifications').appendChild(el); setTimeout(()=>el.remove(),2800);
+}
 
 // ── AUTH ─────────────────────────────────────────────────────
-document.getElementById('btn-login').addEventListener('click',async()=>{
-  const nick=document.getElementById('inp-username').value.trim();
-  const pass=document.getElementById('inp-password').value;
-  clrErr('login-error');
-  if(!nick||nick.length<3) return setErr('login-error','⚠ Nick precisa de ao menos 3 letras');
-  if(!pass) return setErr('login-error','⚠ Digite sua senha');
-  try{await signInWithEmailAndPassword(auth,nickEmail(nick),pass);}
-  catch(e){
-    if(e.code==='auth/user-not-found'||e.code==='auth/invalid-credential') setErr('login-error','⚠ Nick não encontrado — crie uma conta');
-    else setErr('login-error','⚠ '+(authErrMsg[e.code]||e.code));
+$('btn-login').onclick = async () => {
+  const nick=$('inp-username').value.trim(), pass=$('inp-password').value;
+  $('login-error').textContent='';
+  if(nick.length<3) return $('login-error').textContent='⚠ Nick precisa de 3+ letras';
+  if(!pass) return $('login-error').textContent='⚠ Digite a senha';
+  try { await signInWithEmailAndPassword(auth, nick2mail(nick), pass); }
+  catch(e){ $('login-error').textContent = e.code==='auth/invalid-credential'||e.code==='auth/user-not-found'
+    ? '⚠ Nick não encontrado — crie uma conta' : '⚠ Senha incorreta'; }
+};
+$('btn-register').onclick = async () => {
+  const nick=$('inp-username').value.trim(), pass=$('inp-password').value;
+  $('login-error').textContent='';
+  if(nick.length<3) return $('login-error').textContent='⚠ Nick precisa de 3+ letras';
+  if(pass.length<6) return $('login-error').textContent='⚠ Senha mín. 6 caracteres';
+  try {
+    const c = await createUserWithEmailAndPassword(auth, nick2mail(nick), pass);
+    await updateProfile(c.user,{displayName:nick});
+  } catch(e){ $('login-error').textContent = e.code==='auth/email-already-in-use'
+    ? '⚠ Nick já existe!' : '⚠ '+e.code; }
+};
+$('btn-logout').onclick = async () => { await doLeave(); await signOut(auth); };
+
+onAuthStateChanged(auth, user => {
+  $('screen-loading').classList.add('hidden');
+  ME = user;
+  if(user){
+    $('lobby-username').textContent = user.displayName||'Jogador';
+    screen('screen-lobby');
+    startLobbyListener();
+  } else {
+    stopLobbyListener(); stopRoomListener(); stopChatListener();
+    screen('screen-login');
   }
 });
-document.getElementById('btn-register').addEventListener('click',async()=>{
-  const nick=document.getElementById('inp-username').value.trim();
-  const pass=document.getElementById('inp-password').value;
-  clrErr('login-error');
-  if(!nick||nick.length<3) return setErr('login-error','⚠ Nick precisa de ao menos 3 letras');
-  if(!pass||pass.length<6) return setErr('login-error','⚠ Senha deve ter ao menos 6 caracteres');
-  try{
-    const cred=await createUserWithEmailAndPassword(auth,nickEmail(nick),pass);
-    await updateProfile(cred.user,{displayName:nick});
-    await set(ref(db,`damas_users/${cred.user.uid}`),{username:nick,wins:0,losses:0,createdAt:Date.now()});
-  }catch(e){
-    if(e.code==='auth/email-already-in-use') setErr('login-error','⚠ Este nick já está em uso!');
-    else setErr('login-error','⚠ '+(authErrMsg[e.code]||e.code));
-  }
-});
-const authErrMsg={'auth/wrong-password':'Senha incorreta','auth/weak-password':'Senha muito fraca','auth/too-many-requests':'Muitas tentativas — aguarde'};
-document.getElementById('btn-logout').addEventListener('click',async()=>{await leaveCurrentRoom();await signOut(auth);});
+setTimeout(()=>{ if(!ME) $('screen-loading').classList.add('hidden'); }, 3000);
 
-onAuthStateChanged(auth,user=>{
-  document.getElementById('screen-loading').classList.add('hidden');
-  if(user){currentUser=user;document.getElementById('lobby-username').textContent=user.displayName||'Jogador';showScreen('screen-lobby');startRoomListeners();}
-  else{currentUser=null;cleanupListeners();showScreen('screen-login');}
-});
-setTimeout(()=>{if(!currentUser){document.getElementById('screen-loading').classList.add('hidden');showScreen('screen-login');}},3000);
-
-// ── LOBBY / ROOMS ─────────────────────────────────────────────
-function startRoomListeners(){
-  cleanupListeners();
-  const r=ref(db,'damas_rooms');
-  const fn=onValue(r,snap=>{
-    const pubEl=document.getElementById('public-rooms-list');
-    const privEl=document.getElementById('private-rooms-list');
-    pubEl.innerHTML=''; privEl.innerHTML='';
-    if(!snap.exists()){
-      pubEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala — crie uma! ]</div>';
-      privEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala privada ]</div>';
-      return;
-    }
+// ── LOBBY ─────────────────────────────────────────────────────
+function startLobbyListener(){
+  stopLobbyListener();
+  const r = ref(db,'damas_rooms');
+  const fn = onValue(r, snap => {
+    const pub=$('public-rooms-list'), priv=$('private-rooms-list');
+    pub.innerHTML=''; priv.innerHTML='';
     let pc=0,vc=0;
-    Object.entries(snap.val()).forEach(([id,room])=>{
-      // Hide finished rooms from lobby
-      if(room.state==='finished') return;
-      const cnt=room.players?Object.keys(room.players).length:0;
-      const full=cnt>=MAX_PLAYERS;
-      const card=makeRoomCard(id,room,cnt,full);
-      if(room.isPrivate){privEl.appendChild(card);vc++;}
-      else{pubEl.appendChild(card);pc++;}
-    });
-    if(!pc) pubEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala — crie uma! ]</div>';
-    if(!vc) privEl.innerHTML='<div class="empty-rooms">[ Nenhuma sala privada ]</div>';
+    if(snap.exists()){
+      Object.entries(snap.val()).forEach(([id,room])=>{
+        // skip rooms with no players (ghost rooms) and finished ones
+        const cnt = room.players ? Object.keys(room.players).length : 0;
+        if(cnt===0 || room.state==='finished') return;
+        const card = makeRoomCard(id,room,cnt);
+        if(room.isPrivate){priv.appendChild(card);vc++;}
+        else{pub.appendChild(card);pc++;}
+      });
+    }
+    if(!pc) pub.innerHTML='<div class="empty-rooms">[ Nenhuma sala — crie uma! ]</div>';
+    if(!vc) priv.innerHTML='<div class="empty-rooms">[ Nenhuma sala privada ]</div>';
   });
-  roomListeners.push({ref:r,fn});
+  unsub_lobby = fn;
 }
-function cleanupListeners(){roomListeners.forEach(({ref:r,fn})=>off(r,'value',fn));roomListeners=[];}
+function stopLobbyListener(){ if(unsub_lobby){ unsub_lobby(); unsub_lobby=null; } }
 
-function makeRoomCard(id,room,cnt,full){
+function makeRoomCard(id,room,cnt){
+  const full=cnt>=2, playing=room.state==='playing';
   const card=document.createElement('div');
   card.className='room-card'+(full?' full':'');
-  const playing=room.state==='playing';
-  const statusCls=playing?'status-playing':'status-waiting';
-  const statusTxt=playing?'EM JOGO':'AGUARDANDO';
-  card.innerHTML=`
-    <div>
-      <div class="room-name">${escapeHtml(room.name)}</div>
-      <div class="room-meta">Host: ${escapeHtml(room.hostName||'?')} · ${cnt}/${MAX_PLAYERS} jogadores</div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-      <span class="room-status ${statusCls}">${statusTxt}</span>
-      ${room.isPrivate?'<span style="color:var(--warn);font-size:0.9rem">🔒</span>':''}
-    </div>`;
-  if(!full&&!playing) card.addEventListener('click',()=>tryJoinRoom(id,room));
+  const stCls=playing?'status-playing':'status-waiting';
+  const stTxt=playing?'EM JOGO':'AGUARDANDO';
+  card.innerHTML=`<div>
+    <div class="room-name">${esc(room.name)}</div>
+    <div class="room-meta">Host: ${esc(room.hostName||'?')} · ${cnt}/2</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+    <span class="room-status ${stCls}">${stTxt}</span>
+    ${room.isPrivate?'<span style="color:var(--warn);font-size:0.9rem">🔒</span>':''}
+  </div>`;
+  if(!full&&!playing) card.onclick=()=>tryJoin(id,room);
   return card;
 }
 
-// ── CREATE ROOM ──────────────────────────────────────────────
-document.getElementById('btn-create-public').addEventListener('click',()=>{
-  isPrivateCreate=false;
-  document.getElementById('room-pw-wrap').classList.add('hidden');
-  document.getElementById('inp-room-name').value='';
-  clrErr('room-create-error'); showModal('modal-create-room');
-});
-document.getElementById('btn-create-private').addEventListener('click',()=>{
-  isPrivateCreate=true;
-  document.getElementById('room-pw-wrap').classList.remove('hidden');
-  document.getElementById('inp-room-name').value='';
-  document.getElementById('inp-room-password').value='';
-  clrErr('room-create-error'); showModal('modal-create-room');
-});
-document.getElementById('btn-cancel-create').addEventListener('click',()=>hideModal('modal-create-room'));
-document.getElementById('btn-confirm-create').addEventListener('click',async()=>{
-  const name=document.getElementById('inp-room-name').value.trim();
-  const pw=isPrivateCreate?document.getElementById('inp-room-password').value:'';
-  clrErr('room-create-error');
-  if(!name) return setErr('room-create-error','⚠ Digite um nome');
-  if(isPrivateCreate&&!pw) return setErr('room-create-error','⚠ Digite uma senha');
-  try{await createRoom(name,isPrivateCreate,pw);hideModal('modal-create-room');}
-  catch(e){setErr('room-create-error','⚠ '+e.message);}
-});
+// ── CREATE ROOM ───────────────────────────────────────────────
+$('btn-create-public').onclick=()=>{ $('room-pw-wrap').classList.add('hidden'); $('inp-room-name').value=''; $('room-create-error').textContent=''; modal('modal-create-room'); window._isPrivate=false; };
+$('btn-create-private').onclick=()=>{ $('room-pw-wrap').classList.remove('hidden'); $('inp-room-name').value=''; $('inp-room-password').value=''; $('room-create-error').textContent=''; modal('modal-create-room'); window._isPrivate=true; };
+$('btn-cancel-create').onclick=()=>unmodal('modal-create-room');
+$('btn-confirm-create').onclick=async()=>{
+  const name=$('inp-room-name').value.trim();
+  const pw=window._isPrivate?$('inp-room-password').value:'';
+  $('room-create-error').textContent='';
+  if(!name) return $('room-create-error').textContent='⚠ Digite o nome';
+  if(window._isPrivate&&!pw) return $('room-create-error').textContent='⚠ Digite a senha';
+  unmodal('modal-create-room');
+  await createRoom(name, window._isPrivate, pw);
+};
 
-async function createRoom(name,isPrivate,pw){
-  if(!currentUser) throw new Error('Não autenticado');
-  const rRef=push(ref(db,'damas_rooms'));const rid=rRef.key;
-  const data={id:rid,name,isPrivate,password:isPrivate?hashStr(pw):'',
-    host:currentUser.uid,hostName:currentUser.displayName||'Host',
-    players:{[currentUser.uid]:{uid:currentUser.uid,name:currentUser.displayName||'Jogador',color:'red',joinedAt:Date.now()}},
-    state:'waiting',createdAt:Date.now(),maxPlayers:MAX_PLAYERS,
-    board:null,turn:'red',moveCount:0};
-  await set(rRef,data);
-  currentRoomId=rid; isHost=true; myColor='red';
-  await attachRoom(rid); enterWaiting(data);
+async function createRoom(name, isPrivate, pw){
+  const r = push(ref(db,'damas_rooms')); const rid=r.key;
+  roomId=rid; amHost=true; myColor='red';
+  await set(r,{
+    id:rid, name, isPrivate, password:isPrivate?hashPw(pw):'',
+    host:ME.uid, hostName:ME.displayName||'Host',
+    players:{ [ME.uid]:{uid:ME.uid,name:ME.displayName||'Jogador',color:'red'} },
+    state:'waiting', board:null, turn:'red', winner:null, chainCapture:null
+  });
+  onDisconnect(ref(db,`damas_rooms/${rid}/players/${ME.uid}`)).remove();
+  startRoomListener(rid);
+  $('wr-name').textContent='♟ '+name;
+  modal('modal-waiting');
 }
 
 // ── JOIN ROOM ─────────────────────────────────────────────────
-async function tryJoinRoom(id,room){
-  if(room.isPrivate){pendingJoin={id,room};document.getElementById('inp-join-password').value='';clrErr('join-error');showModal('modal-join-private');}
-  else await doJoin(id,room);
+let _pendingJoin=null;
+function tryJoin(id,room){
+  if(room.isPrivate){ _pendingJoin={id,room}; $('inp-join-password').value=''; $('join-error').textContent=''; modal('modal-join-private'); }
+  else doJoin(id,room);
 }
-document.getElementById('btn-confirm-join').addEventListener('click',async()=>{
-  if(!pendingJoin) return;
-  if(hashStr(document.getElementById('inp-join-password').value)!==pendingJoin.room.password) return setErr('join-error','⚠ Senha incorreta!');
-  hideModal('modal-join-private'); await doJoin(pendingJoin.id,pendingJoin.room); pendingJoin=null;
-});
-document.getElementById('btn-cancel-join').addEventListener('click',()=>{hideModal('modal-join-private');pendingJoin=null;});
+$('btn-cancel-join').onclick=()=>{ unmodal('modal-join-private'); _pendingJoin=null; };
+$('btn-confirm-join').onclick=()=>{
+  if(!_pendingJoin) return;
+  const pw=$('inp-join-password').value;
+  if(hashPw(pw)!==_pendingJoin.room.password) return $('join-error').textContent='⚠ Senha incorreta!';
+  unmodal('modal-join-private'); doJoin(_pendingJoin.id,_pendingJoin.room); _pendingJoin=null;
+};
 
 async function doJoin(id,room){
-  if(!currentUser) return;
   const cnt=room.players?Object.keys(room.players).length:0;
-  if(cnt>=MAX_PLAYERS) return notify('Sala cheia!','warn');
-  await dbUpdate(ref(db,`damas_rooms/${id}/players/${currentUser.uid}`),{
-    uid:currentUser.uid,name:currentUser.displayName||'Jogador',color:'black',joinedAt:Date.now()
-  });
-  currentRoomId=id; isHost=false; myColor='black';
-  await attachRoom(id); enterWaiting(room);
+  if(cnt>=2) return notify('Sala cheia!','warn');
+  roomId=id; amHost=false; myColor='black';
+  await dbUpdate(ref(db,`damas_rooms/${id}/players/${ME.uid}`),{uid:ME.uid,name:ME.displayName||'Jogador',color:'black'});
+  onDisconnect(ref(db,`damas_rooms/${id}/players/${ME.uid}`)).remove();
+  startRoomListener(id);
+  $('wr-name').textContent='♟ '+room.name;
+  modal('modal-waiting');
 }
 
 // ── ROOM LISTENER ─────────────────────────────────────────────
-let prevRoomState=null;
-async function attachRoom(rid){
-  onDisconnect(ref(db,`damas_rooms/${rid}/players/${currentUser.uid}`)).remove();
-  prevRoomState=null;
-  const rRef=ref(db,`damas_rooms/${rid}`);
-  const fn=onValue(rRef,snap=>{
+function startRoomListener(rid){
+  stopRoomListener();
+  const r=ref(db,`damas_rooms/${rid}`);
+  unsub_room = onValue(r, snap=>{
     if(!snap.exists()){
-      currentRoom=null;currentRoomId=null;isHost=false;myColor=null;prevRoomState=null;
-      hideModal('modal-waiting');
-      document.getElementById('gameover-overlay').classList.add('hidden');
+      // room deleted by other player
+      roomId=null; roomData=null; amHost=false; myColor=null; selectedCell=null; mustFrom=null;
+      stopRoomListener(); stopChatListener();
+      unmodal('modal-waiting');
+      $('gameover-overlay').classList.add('hidden');
       notify('Sala encerrada','warn');
-      showScreen('screen-lobby'); startRoomListeners(); return;
+      stopLobbyListener(); screen('screen-lobby'); startLobbyListener();
+      return;
     }
-    currentRoom=snap.val();
-    const newState=currentRoom.state;
-    // Always update waiting room UI
-    updateWaiting(currentRoom);
-    if(newState==='playing'){
-      hideModal('modal-waiting');
-      showScreen('screen-game');
-      // Init chat ONCE when game first starts (for both host and guest)
-      if(prevRoomState!=='playing'){
-        initChat(rid);
-      }
-      renderBoard(currentRoom.board);
-      updateGameUI();
-      // Show winner screen if finished
-      if(currentRoom.winner){
-        showGameOver(currentRoom.winner);
-      }
-    } else if(newState==='finished'){
-      if(currentRoom.winner) showGameOver(currentRoom.winner);
+    roomData = snap.val();
+    // Always refresh waiting modal
+    refreshWaiting();
+    if(roomData.state==='playing'){
+      unmodal('modal-waiting');
+      screen('screen-game');
+      // Start chat first time we enter playing state
+      startChatListener(rid);
+      // Update board and UI
+      board = boardFromStr(roomData.board);
+      if(roomData.chainCapture){
+        const p=roomData.chainCapture.split(','); mustFrom=[+p[0],+p[1]];
+      } else { mustFrom=null; }
+      renderBoard();
+      updateSidebar();
     }
-    prevRoomState=newState;
+    if(roomData.winner){
+      showGameOver(roomData.winner);
+    }
   });
-  roomListeners.push({ref:rRef,fn});
 }
+function stopRoomListener(){ if(unsub_room){ unsub_room(); unsub_room=null; } }
 
-async function leaveCurrentRoom(){
-  if(!currentRoomId||!currentUser) return;
-  const rid=currentRoomId;
-  const roomSnap=await get(ref(db,`damas_rooms/${rid}`));
-  // Remove this player from room
-  await remove(ref(db,`damas_rooms/${rid}/players/${currentUser.uid}`));
-  // If room finished or host leaving → check if should delete
-  const roomData=roomSnap.exists()?roomSnap.val():null;
-  const isFinished=roomData?.state==='finished';
-  const playerSnap=await get(ref(db,`damas_rooms/${rid}/players`));
-  const playersLeft=playerSnap.exists()?Object.keys(playerSnap.val()).length:0;
-  if(isFinished||playersLeft===0){
-    // Delete whole room (including chat) when finished or empty
-    await remove(ref(db,`damas_rooms/${rid}`));
-  } else if(isHost){
-    // Transfer host to remaining player
-    const pl=playerSnap.val(),nh=Object.keys(pl)[0];
+// ── LEAVE ─────────────────────────────────────────────────────
+async function doLeave(){
+  if(!roomId||!ME) return;
+  const rid=roomId;
+  stopChatListener(); stopRoomListener();
+  roomId=null; roomData=null; amHost=false; myColor=null; selectedCell=null; mustFrom=null;
+  // Remove self
+  await remove(ref(db,`damas_rooms/${rid}/players/${ME.uid}`));
+  // Check remaining players
+  const snap=await get(ref(db,`damas_rooms/${rid}`));
+  if(!snap.exists()) return;
+  const data=snap.val();
+  const remaining=data.players?Object.keys(data.players).length:0;
+  if(remaining===0||data.state==='finished'){
+    await remove(ref(db,`damas_rooms/${rid}`)); // delete whole room
+  } else {
+    // Transfer host, reset to waiting
+    const pl=data.players, nh=Object.keys(pl)[0];
     await dbUpdate(ref(db,`damas_rooms/${rid}`),{host:nh,hostName:pl[nh].name,state:'waiting',board:null,turn:'red',winner:null,chainCapture:null});
   }
-  if(chatListener){off(chatListener.ref,'value',chatListener.fn);chatListener=null;}
-  currentRoomId=null;currentRoom=null;isHost=false;myColor=null;
 }
 
-// ── WAITING ROOM UI ───────────────────────────────────────────
-function enterWaiting(room){
-  document.getElementById('wr-name').textContent='♟ '+room.name;
-  updateWaiting(room); showModal('modal-waiting');
-}
-function updateWaiting(room){
-  const players=room.players||{};
-  const list=document.getElementById('wr-players'); list.innerHTML='';
+// ── WAITING ROOM ──────────────────────────────────────────────
+function refreshWaiting(){
+  if(!roomData) return;
+  const players=roomData.players||{};
+  const list=$('wr-players'); list.innerHTML='';
   Object.values(players).forEach(p=>{
     const isRed=p.color==='red';
+    const bg=isRed?'background:radial-gradient(circle at 35% 35%,#ff6644,#cc1100,#880000)'
+                  :'background:radial-gradient(circle at 35% 35%,#555,#222,#111)';
     const d=document.createElement('div'); d.className='waiting-player';
-    const pieceColor=isRed
-      ?'background:radial-gradient(circle at 35% 35%,#ff6644,#cc1100,#880000)'
-      :'background:radial-gradient(circle at 35% 35%,#555,#222,#111)';
-    const label=isRed?'Vermelho':'Preto';
-    d.innerHTML=`<div class="piece-preview" style="${pieceColor}"></div><span style="flex:1">${escapeHtml(p.name)}</span><span style="font-size:0.7rem;opacity:0.4">${label}${p.uid===room.host?' 👑':''}</span>`;
+    d.innerHTML=`<div class="piece-preview" style="${bg}"></div><span style="flex:1">${esc(p.name)}</span><span style="font-size:0.7rem;opacity:0.4">${isRed?'Vermelho':'Preto'}${p.uid===roomData.host?' 👑':''}</span>`;
     list.appendChild(d);
   });
   const cnt=Object.keys(players).length;
-  document.getElementById('wr-status').textContent=`${cnt}/2 jogadores`;
-  const sb=document.getElementById('btn-start-game');
-  const canStart=currentUser&&room.host===currentUser.uid&&cnt===2;
-  sb.style.display=canStart?'block':'none';
+  $('wr-status').textContent=`${cnt}/2 jogadores`;
+  const canStart=ME&&roomData.host===ME.uid&&cnt===2&&roomData.state==='waiting';
+  $('btn-start-game').style.display=canStart?'':'none';
 }
-document.getElementById('btn-start-game').addEventListener('click',async()=>{
-  if(!currentRoomId) return;
-  const board=initBoard();
-  await dbUpdate(ref(db,`damas_rooms/${currentRoomId}`),{
-    state:'playing',board:boardToFirebase(board),
-    turn:'red',moveCount:0,startedAt:Date.now(),winner:null,chainCapture:null
+
+$('btn-start-game').onclick=async()=>{
+  if(!roomId) return;
+  const b=initBoard();
+  await dbUpdate(ref(db,`damas_rooms/${roomId}`),{
+    state:'playing', board:boardToStr(b), turn:'red',
+    winner:null, chainCapture:null, startedAt:Date.now()
   });
-  // initChat is called by the room listener when state changes to 'playing'
-});
-document.getElementById('btn-leave-waiting').addEventListener('click',async()=>{
-  hideModal('modal-waiting'); await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
-});
-// btn-leave-game handler defined below (with chat cleanup)
+};
+$('btn-leave-waiting').onclick=async()=>{ unmodal('modal-waiting'); await doLeave(); screen('screen-lobby'); startLobbyListener(); };
+$('btn-leave-game').onclick=async()=>{ $('gameover-overlay').classList.add('hidden'); await doLeave(); screen('screen-lobby'); startLobbyListener(); };
+$('btn-go-lobby').onclick=async()=>{ $('gameover-overlay').classList.add('hidden'); await doLeave(); screen('screen-lobby'); startLobbyListener(); };
+$('btn-rematch').onclick=async()=>{
+  $('gameover-overlay').classList.add('hidden');
+  if(!roomId||!amHost){ notify('Só o host pode iniciar revanche','warn'); return; }
+  const b=initBoard();
+  await dbUpdate(ref(db,`damas_rooms/${roomId}`),{
+    state:'playing', board:boardToStr(b), turn:'red',
+    winner:null, chainCapture:null, startedAt:Date.now()
+  });
+};
+
+// ── CHAT ─────────────────────────────────────────────────────
+let chatOpen=true;
+function startChatListener(rid){
+  if(unsub_chat) return; // already listening
+  const msgs=$('chat-messages');
+  const cRef=ref(db,`damas_rooms/${rid}/chat`);
+  unsub_chat = onValue(cRef, snap=>{
+    msgs.innerHTML='';
+    if(!snap.exists()) return;
+    Object.values(snap.val()).sort((a,b)=>a.ts-b.ts).forEach(m=>{
+      const el=document.createElement('div');
+      el.className='chat-msg'+(m.system?' system':'');
+      el.style.borderLeftColor=m.system?'rgba(255,255,255,0.1)':m.color;
+      el.innerHTML=m.system?esc(m.text):`<span class="chat-nick" style="color:${m.color}">${esc(m.nick)}</span>${esc(m.text)}`;
+      msgs.appendChild(el);
+    });
+    msgs.scrollTop=msgs.scrollHeight;
+  });
+  // Send system message (only host to avoid duplicates)
+  if(amHost){
+    push(cRef,{uid:'sys',nick:'',text:'Partida iniciada! Que ganhe o melhor ♟',color:'#aaa',ts:Date.now(),system:true});
+  }
+}
+function stopChatListener(){ if(unsub_chat){ unsub_chat(); unsub_chat=null; } }
+
+async function sendChat(){
+  if(!roomId||!ME) return;
+  const inp=$('chat-input'), text=inp.value.trim(); if(!text) return; inp.value='';
+  const color=myColor==='red'?'#FF5533':'#AAAAAA';
+  await push(ref(db,`damas_rooms/${roomId}/chat`),{uid:ME.uid,nick:ME.displayName||'?',text,color,ts:Date.now(),system:false});
+}
+$('chat-send').onclick=sendChat;
+$('chat-input').onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();sendChat();} };
+$('chat-toggle-btn').onclick=()=>{
+  chatOpen=!chatOpen;
+  $('chat-messages').style.display=chatOpen?'':'none';
+  $('chat-input-row').style.display=chatOpen?'':'none';
+  $('chat-toggle-btn').textContent=chatOpen?'−':'+';
+};
 
 // ── CHECKERS LOGIC ────────────────────────────────────────────
-// Board: 8x8 array. Each cell: null | {color:'red'|'black', king:bool}
-// Red moves UP (row decreases), Black moves DOWN (row increases)
-// Red starts at rows 5-7, Black at rows 0-2
-
 function initBoard(){
   const b=Array.from({length:8},()=>Array(8).fill(null));
   for(let r=0;r<3;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]={color:'black',king:false};
   for(let r=5;r<8;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]={color:'red',king:false};
   return b;
 }
-
-function boardToFirebase(b){
-  // Serialize 8x8 to flat string: '.' empty, 'r' red, 'R' red king, 'b' black, 'B' black king
-  return b.map(row=>row.map(cell=>{
-    if(!cell) return '.';
-    if(cell.color==='red') return cell.king?'R':'r';
-    return cell.king?'B':'b';
-  }).join('')).join('|');
-}
-function boardFromFirebase(s){
+function boardToStr(b){ return b.map(row=>row.map(c=>!c?'.':c.color==='red'?(c.king?'R':'r'):(c.king?'B':'b')).join('')).join('|'); }
+function boardFromStr(s){
   if(!s) return initBoard();
-  return s.split('|').map(row=>row.split('').map(c=>{
-    if(c==='.') return null;
-    if(c==='r') return{color:'red',king:false};
-    if(c==='R') return{color:'red',king:true};
-    if(c==='b') return{color:'black',king:false};
-    if(c==='B') return{color:'black',king:true};
-    return null;
-  }));
+  return s.split('|').map(row=>row.split('').map(c=>c==='.'?null:c==='r'?{color:'red',king:false}:c==='R'?{color:'red',king:true}:c==='b'?{color:'black',king:false}:{color:'black',king:true}));
 }
+function inBounds(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
 
-// Get all valid moves for a piece at (r,c) on board b
-function getPieceMoves(b,r,c,mustCapture){
-  const piece=b[r][c]; if(!piece) return [];
-  // Directions: normal pieces move one way, kings move all 4 diagonals
-  const dirs=[];
-  if(!piece.king){
-    if(piece.color==='red')   dirs.push([-1,-1],[-1,1]); // red moves up
-    if(piece.color==='black') dirs.push([1,-1],[1,1]);   // black moves down
-  } else {
-    dirs.push([-1,-1],[-1,1],[1,-1],[1,1]); // king: all 4 diagonals
-  }
+function getMoves(b,r,c,captureOnly=false){
+  const p=b[r][c]; if(!p) return [];
+  const dirs=p.king?[[-1,-1],[-1,1],[1,-1],[1,1]]:p.color==='red'?[[-1,-1],[-1,1]]:[[1,-1],[1,1]];
   const moves=[];
   for(const [dr,dc] of dirs){
-    if(piece.king){
-      // FLYING KING: can move/capture any number of squares diagonally
-      let nr=r+dr, nc=c+dc;
-      let foundEnemy=null, foundEnemyPos=null;
+    if(p.king){
+      let nr=r+dr,nc=c+dc,enemy=null,enemyPos=null;
       while(inBounds(nr,nc)){
-        const target=b[nr][nc];
-        if(!target){
-          if(!foundEnemy&&!mustCapture){
-            // Free square to move to
-            moves.push({type:'move',from:[r,c],to:[nr,nc],captures:[]});
-          } else if(foundEnemy){
-            // Landing square after a capture
-            moves.push({type:'capture',from:[r,c],to:[nr,nc],captures:[foundEnemyPos]});
-          }
-        } else if(target.color!==piece.color&&!foundEnemy){
-          // First enemy in this direction - can jump over it
-          foundEnemy=target; foundEnemyPos=[nr,nc];
-        } else {
-          // Blocked: own piece or second enemy
-          break;
-        }
+        const t=b[nr][nc];
+        if(!t){
+          if(!captureOnly&&!enemy) moves.push({from:[r,c],to:[nr,nc],cap:[]});
+          else if(enemy) moves.push({from:[r,c],to:[nr,nc],cap:[enemyPos]});
+        } else if(t.color!==p.color&&!enemy){ enemy=t; enemyPos=[nr,nc]; }
+        else break;
         nr+=dr; nc+=dc;
       }
     } else {
-      // Normal piece: 1 square move, 2 square capture
-      const nr=r+dr, nc=c+dc;
+      const nr=r+dr,nc=c+dc;
       if(!inBounds(nr,nc)) continue;
-      if(!b[nr][nc]&&!mustCapture){
-        moves.push({type:'move',from:[r,c],to:[nr,nc],captures:[]});
-      } else if(b[nr][nc]&&b[nr][nc].color!==piece.color){
-        const jr=r+dr*2, jc=c+dc*2;
-        if(inBounds(jr,jc)&&!b[jr][jc]){
-          moves.push({type:'capture',from:[r,c],to:[jr,jc],captures:[[nr,nc]]});
-        }
+      if(!b[nr][nc]&&!captureOnly) moves.push({from:[r,c],to:[nr,nc],cap:[]});
+      else if(b[nr][nc]&&b[nr][nc].color!==p.color){
+        const jr=r+dr*2,jc=c+dc*2;
+        if(inBounds(jr,jc)&&!b[jr][jc]) moves.push({from:[r,c],to:[jr,jc],cap:[[nr,nc]]});
       }
     }
   }
   return moves;
 }
 
-function inBounds(r,c){return r>=0&&r<8&&c>=0&&c<8;}
-
-// Get all valid moves for a color, enforcing mandatory capture
-function getAllMoves(b,color){
-  const captures=[];const moves=[];
+function allMoves(b,color){
+  const caps=[],movs=[];
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     if(b[r][c]?.color!==color) continue;
-    const pm=getPieceMoves(b,r,c,false);
-    pm.forEach(m=>{ if(m.type==='capture') captures.push(m); else moves.push(m); });
+    getMoves(b,r,c,false).forEach(m=>m.cap.length?caps.push(m):movs.push(m));
   }
-  return captures.length>0?captures:moves; // must capture rule
+  return caps.length?caps:movs;
 }
 
-// Check if a capture chain can continue after a jump
-function getContinuations(b,r,c){
-  const moves=getPieceMoves(b,r,c,true);
-  return moves.filter(m=>m.type==='capture');
-}
-
-// Apply a move to a copy of the board, return new board
-function applyMove(b,move){
-  const nb=b.map(row=>row.map(cell=>cell?{...cell}:null));
-  const [fr,fc]=move.from,[tr,tc]=move.to;
+function applyMove(b,m){
+  const nb=b.map(row=>row.map(c=>c?{...c}:null));
+  const [fr,fc]=m.from,[tr,tc]=m.to;
   nb[tr][tc]=nb[fr][fc]; nb[fr][fc]=null;
-  move.captures.forEach(([cr,cc])=>{ nb[cr][cc]=null; });
-  // King promotion
+  m.cap.forEach(([cr,cc])=>nb[cr][cc]=null);
   if(nb[tr][tc].color==='red'&&tr===0) nb[tr][tc].king=true;
   if(nb[tr][tc].color==='black'&&tr===7) nb[tr][tc].king=true;
   return nb;
 }
 
-function countPieces(b){
-  let red=0,black=0;
-  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
-    if(b[r][c]?.color==='red') red++;
-    else if(b[r][c]?.color==='black') black++;
-  }
-  return{red,black};
-}
-
-function checkWin(b,lastTurn){
-  const counts=countPieces(b);
-  if(counts.red===0) return 'black';
-  if(counts.black===0) return 'red';
-  // No moves = lose
-  const nextTurn=lastTurn==='red'?'black':'red';
-  if(getAllMoves(b,nextTurn).length===0) return lastTurn;
+function countPieces(b){ let r=0,bl=0; for(let i=0;i<8;i++) for(let j=0;j<8;j++){if(b[i][j]?.color==='red')r++;else if(b[i][j]?.color==='black')bl++;} return{red:r,black:bl}; }
+function checkWinner(b,lastTurn){
+  const c=countPieces(b);
+  if(c.red===0) return 'black'; if(c.black===0) return 'red';
+  const next=lastTurn==='red'?'black':'red';
+  if(allMoves(b,next).length===0) return lastTurn;
   return null;
 }
 
-// ── BOARD RENDER ──────────────────────────────────────────────
-let currentBoard=null;
-let selectedCell=null; // [r,c]
-let validMoves=[];     // current valid moves from selected piece
-let mustCaptureFrom=null; // [r,c] if mid-chain capture
-
-function renderBoard(boardData){
-  if(!boardData) return;
-  currentBoard=boardFromFirebase(boardData);
-  const boardEl=document.getElementById('board');
-  // Calculate cell size based on available space
-  const area=document.querySelector('.board-area');
-  const maxW=area.clientWidth-32, maxH=area.clientHeight-32;
-  const size=Math.min(maxW,maxH);
-  const cellSize=Math.floor(size/8);
-  boardEl.style.width=cellSize*8+'px';
-  boardEl.style.height=cellSize*8+'px';
-  boardEl.style.gridTemplateColumns=`repeat(8,${cellSize}px)`;
-
-  // Determine valid moves for current player
-  const myTurn=currentRoom?.turn===myColor;
-  const allMoves=myTurn?getAllMoves(currentBoard,myColor):[];
-  // Force captures from chain piece if mid-chain
-  const forcedCaptures=mustCaptureFrom?getContinuations(currentBoard,mustCaptureFrom[0],mustCaptureFrom[1]):null;
-  const effectiveMoves=forcedCaptures||allMoves;
-
-  boardEl.innerHTML='';
+// ── BOARD RENDER ─────────────────────────────────────────────
+function renderBoard(){
+  if(!board) return;
+  const el=$('board'), area=document.querySelector('.board-area');
+  const sz=Math.min(area.clientWidth-32,area.clientHeight-32);
+  const cs=Math.floor(sz/8);
+  el.style.cssText=`width:${cs*8}px;height:${cs*8}px;grid-template-columns:repeat(8,${cs}px)`;
+  const myTurn=roomData?.turn===myColor;
+  const forcedPiece=mustFrom;
+  // Compute effective moves
+  let eff=[];
+  if(myTurn){
+    if(forcedPiece) eff=getMoves(board,forcedPiece[0],forcedPiece[1],true).filter(m=>m.cap.length);
+    else eff=allMoves(board,myColor);
+  }
+  el.innerHTML='';
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     const cell=document.createElement('div');
-    const isDark=(r+c)%2===1;
-    cell.className='cell '+(isDark?'dark':'light');
-    cell.dataset.r=r; cell.dataset.c=c;
-    // Highlight states
-    const isSelected=selectedCell&&selectedCell[0]===r&&selectedCell[1]===c;
-    const isMoveDest=selectedCell&&effectiveMoves.some(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c);
-    const isCaptureDest=isMoveDest&&effectiveMoves.find(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c)?.type==='capture';
-    if(isSelected) cell.classList.add('selected');
-    else if(isCaptureDest) cell.classList.add('highlight-capture');
-    else if(isMoveDest) cell.classList.add('highlight-move');
-    // Piece
-    const piece=currentBoard[r][c];
+    const dark=(r+c)%2===1;
+    cell.className='cell '+(dark?'dark':'light');
+    const sel=selectedCell&&selectedCell[0]===r&&selectedCell[1]===c;
+    const isMoveDst=selectedCell&&eff.some(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c);
+    const isCapDst=isMoveDst&&eff.find(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c)?.cap?.length>0;
+    if(sel) cell.classList.add('selected');
+    else if(isCapDst) cell.classList.add('highlight-capture');
+    else if(isMoveDst) cell.classList.add('highlight-move');
+    // piece
+    const piece=board[r][c];
     if(piece){
-      const pieceEl=document.createElement('div');
-      pieceEl.className='piece '+(piece.color==='red'?'red-piece':'black-piece')+(piece.king?' king':'');
-      const canSelect=myTurn&&piece.color===myColor&&isDark&&(!mustCaptureFrom||(mustCaptureFrom[0]===r&&mustCaptureFrom[1]===c));
-      const isMovable=effectiveMoves.some(m=>m.from[0]===r&&m.from[1]===c);
-      if(canSelect&&isMovable) pieceEl.classList.add('mine');
-      if(isSelected) pieceEl.classList.add('selected-piece');
-      pieceEl.addEventListener('click',()=>onPieceClick(r,c,effectiveMoves));
-      cell.appendChild(pieceEl);
+      const pe=document.createElement('div');
+      pe.className='piece '+(piece.color==='red'?'red-piece':'black-piece')+(piece.king?' king':'');
+      const canPick=myTurn&&piece.color===myColor&&(!forcedPiece||(forcedPiece[0]===r&&forcedPiece[1]===c));
+      const isMovable=eff.some(m=>m.from[0]===r&&m.from[1]===c);
+      if(canPick&&isMovable) pe.classList.add('mine');
+      if(sel) pe.classList.add('selected-piece');
+      pe.onclick=e=>{ e.stopPropagation(); onPieceClick(r,c,eff); };
+      cell.appendChild(pe);
     }
-    // Cell click for move destination
-    if(isDark) cell.addEventListener('click',()=>onCellClick(r,c,effectiveMoves));
-    boardEl.appendChild(cell);
+    if(dark) cell.onclick=()=>onCellClick(r,c,eff);
+    el.appendChild(cell);
   }
 }
 
-function onPieceClick(r,c,effectiveMoves){
-  const myTurn=currentRoom?.turn===myColor;
+function onPieceClick(r,c,eff){
+  const myTurn=roomData?.turn===myColor;
   if(!myTurn) return;
-  const piece=currentBoard[r][c];
-  // Click own piece → select
-  if(piece&&piece.color===myColor){
-    const canSelect=effectiveMoves.some(m=>m.from[0]===r&&m.from[1]===c);
-    if(!canSelect) return;
-    if(mustCaptureFrom&&!(mustCaptureFrom[0]===r&&mustCaptureFrom[1]===c)) return;
-    selectedCell=[r,c];
-    renderBoard(currentRoom.board);
-    return;
+  const p=board[r][c];
+  if(p&&p.color===myColor){
+    const movable=eff.some(m=>m.from[0]===r&&m.from[1]===c);
+    if(!movable) return;
+    selectedCell=[r,c]; renderBoard(); return;
   }
-  // Click enemy piece → check if capture destination
-  onCellClick(r,c,effectiveMoves);
+  onCellClick(r,c,eff);
 }
-
-function onCellClick(r,c,effectiveMoves){
-  const myTurn=currentRoom?.turn===myColor;
+function onCellClick(r,c,eff){
+  const myTurn=roomData?.turn===myColor;
   if(!myTurn||!selectedCell) return;
-  const move=effectiveMoves.find(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c);
+  const move=eff.find(m=>m.from[0]===selectedCell[0]&&m.from[1]===selectedCell[1]&&m.to[0]===r&&m.to[1]===c);
   if(!move) return;
   commitMove(move);
 }
 
 async function commitMove(move){
-  if(!currentRoomId||!currentRoom) return;
-  let nb=applyMove(currentBoard,move);
-  // Check for capture chain
-  let nextTurn=currentRoom.turn==='red'?'black':'red';
-  let chainCapture=null;
-  if(move.type==='capture'){
-    const cont=getContinuations(nb,move.to[0],move.to[1]);
-    if(cont.length>0){
-      // Same player must continue capturing
-      nextTurn=currentRoom.turn;
-      chainCapture=[move.to[0],move.to[1]];
-    }
+  if(!roomId) return;
+  const nb=applyMove(board,move);
+  let nextTurn=roomData.turn==='red'?'black':'red';
+  let chain=null;
+  if(move.cap.length){
+    const cont=getMoves(nb,move.to[0],move.to[1],true).filter(m=>m.cap.length);
+    if(cont.length){ nextTurn=roomData.turn; chain=`${move.to[0]},${move.to[1]}`; }
   }
-  mustCaptureFrom=chainCapture; selectedCell=null;
-  // Check win
-  const winner=checkWin(nb,currentRoom.turn);
-  const newMoveCount=(currentRoom.moveCount||0)+1;
-  await dbUpdate(ref(db,`damas_rooms/${currentRoomId}`),{
-    board:boardToFirebase(nb),
-    turn:nextTurn,
-    moveCount:newMoveCount,
-    chainCapture:chainCapture?`${chainCapture[0]},${chainCapture[1]}`:null,
-    winner:winner||null,
-    state:winner?'finished':'playing',
+  selectedCell=null;
+  const winner=checkWinner(nb,roomData.turn);
+  await dbUpdate(ref(db,`damas_rooms/${roomId}`),{
+    board:boardToStr(nb), turn:nextTurn,
+    chainCapture:chain||null, winner:winner||null,
+    state:winner?'finished':'playing'
   });
-  if(winner) showGameOver(winner);
 }
 
-// ── GAME UI UPDATE ────────────────────────────────────────────
-function updateGameUI(){
-  if(!currentRoom||!currentBoard) return;
-  const b=boardFromFirebase(currentRoom.board);
-  const counts=countPieces(b);
-  const players=currentRoom.players||{};
-  // Find player names by color
+// ── SIDEBAR ───────────────────────────────────────────────────
+function updateSidebar(){
+  if(!roomData||!board) return;
+  const players=roomData.players||{};
   let redName='Vermelho',blackName='Preto';
-  Object.values(players).forEach(p=>{
-    if(p.color==='red') redName=p.name;
-    else if(p.color==='black') blackName=p.name;
-  });
-  document.getElementById('name-red').textContent=redName;
-  document.getElementById('name-black').textContent=blackName;
-  document.getElementById('count-red').textContent=counts.red+' peças';
-  document.getElementById('count-black').textContent=counts.black+' peças';
-  // Turn indicator
-  const myTurn=currentRoom.turn===myColor;
-  const turnName=currentRoom.turn==='red'?redName:blackName;
-  const turnEl=document.getElementById('turn-indicator');
-  turnEl.textContent=myTurn?'▶ SUA VEZ':'⏳ '+turnName+'...';
-  turnEl.className='turn-indicator '+(myTurn?'turn-mine':'turn-enemy');
-  // Highlight player cards
-  document.getElementById('card-red').className='player-info-card'+(currentRoom.turn==='red'?' my-turn':' not-turn');
-  document.getElementById('card-black').className='player-info-card'+(currentRoom.turn==='black'?' my-turn':' not-turn');
-  // Chain capture state
-  if(currentRoom.chainCapture){
-    const parts=currentRoom.chainCapture.split(',');
-    mustCaptureFrom=[parseInt(parts[0]),parseInt(parts[1])];
-  } else {
-    mustCaptureFrom=null;
-  }
-  // Waiting overlay
+  Object.values(players).forEach(p=>{ if(p.color==='red')redName=p.name; else if(p.color==='black')blackName=p.name; });
+  const c=countPieces(board);
+  $('name-red').textContent=redName; $('count-red').textContent=c.red+' peças';
+  $('name-black').textContent=blackName; $('count-black').textContent=c.black+' peças';
+  const myTurn=roomData.turn===myColor;
+  const turnName=roomData.turn==='red'?redName:blackName;
+  $('turn-indicator').textContent=myTurn?'▶ SUA VEZ':'⏳ '+turnName+'...';
+  $('turn-indicator').className='turn-indicator '+(myTurn?'turn-mine':'turn-enemy');
+  $('card-red').className='player-info-card '+(roomData.turn==='red'?'my-turn':'not-turn');
+  $('card-black').className='player-info-card '+(roomData.turn==='black'?'my-turn':'not-turn');
   const cnt=Object.keys(players).length;
-  const waitEl=document.getElementById('waiting-overlay');
-  if(cnt<2&&currentRoom.state!=='finished') waitEl.classList.remove('hidden');
-  else waitEl.classList.add('hidden');
-  document.getElementById('waiting-room-code').textContent=currentRoom.name;
-  // Re-render board with updated moves
-  if(currentRoom.board) renderBoard(currentRoom.board);
-  // Check winner from firebase
-  if(currentRoom.winner&&!document.getElementById('gameover-overlay').classList.contains('hidden')===false){
-    showGameOver(currentRoom.winner);
-  }
+  $('waiting-overlay').classList.toggle('hidden',cnt>=2||!!roomData.winner);
+  $('waiting-room-code').textContent=roomData.name||'';
 }
 
+// ── GAME OVER ─────────────────────────────────────────────────
 function showGameOver(winner){
-  const myWin=winner===myColor;
-  const el=document.getElementById('gameover-overlay');
-  document.getElementById('go-icon').textContent=myWin?'🏆':'💀';
-  document.getElementById('go-title').textContent=myWin?'VITÓRIA!':'DERROTA';
-  document.getElementById('go-title').style.color=myWin?'var(--gold)':'var(--red-bright)';
-  document.getElementById('go-sub').textContent=myWin?'Você dominou o tabuleiro!':'Seu oponente venceu esta vez...';
-  el.classList.remove('hidden');
-  // Update stats
-  if(currentUser){
-    get(ref(db,`damas_users/${currentUser.uid}`)).then(s=>{
-      if(s.exists()){
-        const d=s.val();
-        dbUpdate(ref(db,`damas_users/${currentUser.uid}`),{
-          wins:(d.wins||0)+(myWin?1:0),
-          losses:(d.losses||0)+(myWin?0:1),
-        });
-      }
-    });
-  }
+  const win=winner===myColor;
+  $('go-icon').textContent=win?'🏆':'💀';
+  $('go-title').textContent=win?'VITÓRIA!':'DERROTA';
+  $('go-title').style.color=win?'var(--gold)':'var(--red-bright)';
+  $('go-sub').textContent=win?'Você dominou o tabuleiro!':'Seu oponente venceu...';
+  $('gameover-overlay').classList.remove('hidden');
 }
 
-// btn-rematch defined in LEAVE HANDLERS section
-
-
-// ── CHAT ─────────────────────────────────────────────────────
-let chatVisible=true;
-function initChat(roomId){
-  const msgs=document.getElementById('chat-messages');
-  msgs.innerHTML='';
-  if(chatListener){off(chatListener.ref,'value',chatListener.fn);chatListener=null;}
-  const cRef=ref(db,`damas_rooms/${roomId}/chat`);
-  const fn=onValue(cRef,snap=>{
-    msgs.innerHTML='';
-    if(!snap.exists()) return;
-    Object.values(snap.val()).sort((a,b)=>a.ts-b.ts).forEach(m=>appendMsg(m));
-    msgs.scrollTop=msgs.scrollHeight;
-  });
-  chatListener={ref:cRef,fn};
-  document.getElementById('chat-send').onclick=sendChat;
-  document.getElementById('chat-input').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat();}};
-  document.getElementById('chat-toggle-btn').onclick=()=>{
-    chatVisible=!chatVisible;
-    const w=document.querySelector('.chat-wrapper');
-    document.getElementById('chat-messages').style.display=chatVisible?'':'none';
-    document.getElementById('chat-input-row').style.display=chatVisible?'':'none';
-    document.getElementById('chat-toggle-btn').textContent=chatVisible?'−':'+';
-  };
-  // system message
-  push(ref(db,`damas_rooms/${roomId}/chat`),{uid:'sys',nick:'',text:'Partida iniciada! Que ganhe o melhor ♟',color:'#fff',ts:Date.now(),system:true});
-}
-async function sendChat(){
-  if(!currentRoomId||!currentUser) return;
-  const inp=document.getElementById('chat-input');
-  const text=inp.value.trim(); if(!text) return; inp.value='';
-  const myPieceColor=myColor==='red'?'#FF4422':'#AAAAAA';
-  await push(ref(db,`damas_rooms/${currentRoomId}/chat`),{
-    uid:currentUser.uid,nick:currentUser.displayName||'?',text,color:myPieceColor,ts:Date.now(),system:false
-  });
-}
-function appendMsg(m){
-  const el=document.createElement('div');
-  el.className='chat-msg'+(m.system?' system':'');
-  el.style.borderLeftColor=m.system?'rgba(255,255,255,0.1)':m.color;
-  el.innerHTML=m.system?escapeHtml(m.text):`<span class="chat-nick" style="color:${m.color}">${escapeHtml(m.nick)}</span>${escapeHtml(m.text)}`;
-  document.getElementById('chat-messages').appendChild(el);
-}
-
-// ── WINDOW RESIZE ─────────────────────────────────────────────
-window.addEventListener('resize',()=>{
-  if(currentRoom?.board) renderBoard(currentRoom.board);
-});
-
-// ── LEAVE HANDLERS ────────────────────────────────────────────
-document.getElementById('btn-leave-game').addEventListener('click',async()=>{
-  document.getElementById('gameover-overlay').classList.add('hidden');
-  prevRoomState=null;
-  await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
-});
-document.getElementById('btn-go-lobby').addEventListener('click',async()=>{
-  document.getElementById('gameover-overlay').classList.add('hidden');
-  prevRoomState=null;
-  await leaveCurrentRoom(); startRoomListeners(); showScreen('screen-lobby');
-});
-document.getElementById('btn-rematch').addEventListener('click',async()=>{
-  document.getElementById('gameover-overlay').classList.add('hidden');
-  if(!currentRoomId||!isHost){ notify('Só o host pode iniciar revanche','warn'); return; }
-  const board=initBoard();
-  await dbUpdate(ref(db,`damas_rooms/${currentRoomId}`),{
-    state:'playing',board:boardToFirebase(board),
-    turn:'red',moveCount:0,winner:null,chainCapture:null,startedAt:Date.now()
-  });
-});
+// ── RESIZE ───────────────────────────────────────────────────
+window.onresize=()=>{ if(board) renderBoard(); };
 </script>
 </body>
 </html>
