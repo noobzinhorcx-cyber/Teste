@@ -281,6 +281,102 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 .notif.ok{border:1.5px solid var(--green);color:#6de87a;}
 .notif.warn{border:1.5px solid #f5a042;color:#f5c070;}
 .notif.err{border:1.5px solid #ff5535;color:#ff8868;}
+
+/* ── RANK / PROFILE ─────────────────────────────────────────── */
+.mn-profile{width:100%;max-width:380px;padding:.6rem 1rem;
+  background:rgba(0,0,0,.22);border-radius:14px;
+  display:flex;flex-direction:column;gap:.4rem;margin-top:-.3rem;}
+.mn-rank-row{display:flex;align-items:center;justify-content:space-between;}
+.mn-rank-badge{font-size:.82rem;font-weight:900;letter-spacing:.04em;}
+.mn-coins-txt{font-size:.82rem;font-weight:800;color:var(--gold);}
+.xp-bar-bg{height:6px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden;}
+.xp-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--gold));
+  transition:width .6s ease;}
+.xp-txt{font-size:.6rem;font-weight:700;color:rgba(255,255,255,.35);text-align:right;}
+/* rank badge inline */
+.rank-chip{display:inline-flex;align-items:center;gap:2px;font-size:.6rem;font-weight:800;
+  padding:1px 5px;border-radius:99px;background:rgba(0,0,0,.3);margin-right:3px;vertical-align:middle;}
+
+/* ── SHOP ───────────────────────────────────────────────────── */
+#scr-shop{position:fixed;inset:0;z-index:100;
+  background:linear-gradient(160deg,#c07030,#6a3010);
+  display:flex;flex-direction:column;}
+.shop-header{padding:.85rem 1.1rem;display:flex;align-items:center;gap:.75rem;
+  background:rgba(0,0,0,.2);border-bottom:1px solid rgba(255,255,255,.08);}
+.shop-title{font-size:1.1rem;font-weight:900;color:var(--gold);flex:1;}
+.shop-coins{font-size:.82rem;font-weight:800;color:var(--gold);
+  background:rgba(0,0,0,.25);padding:.3rem .7rem;border-radius:99px;}
+.shop-body{flex:1;overflow-y:auto;padding:.8rem;}
+.shop-sec{font-size:.68rem;font-weight:800;letter-spacing:.18em;color:rgba(255,255,255,.38);
+  text-transform:uppercase;display:flex;align-items:center;gap:.6rem;margin:.4rem 0 .6rem;}
+.shop-sec::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1);}
+.skins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.7rem;margin-bottom:1rem;}
+.skin-card{background:rgba(0,0,0,.28);border:1.5px solid rgba(245,200,66,.1);
+  border-radius:14px;padding:.7rem .5rem;text-align:center;cursor:pointer;transition:.15s;
+  display:flex;flex-direction:column;align-items:center;gap:.35rem;}
+.skin-card:active{transform:scale(.96);}
+.skin-card.owned{border-color:rgba(61,196,74,.4);}
+.skin-card.equipped{border-color:var(--gold);background:rgba(245,200,66,.08);}
+.skin-preview{display:flex;gap:4px;justify-content:center;margin-bottom:2px;}
+.skin-ball{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.18);
+  box-shadow:0 2px 6px #0005;}
+.skin-name{font-size:.62rem;font-weight:800;color:#fff;line-height:1.2;}
+.skin-price{font-size:.6rem;font-weight:700;color:var(--gold);}
+.skin-price.free{color:#6de87a;}
+.skin-price.owned-lbl{color:rgba(255,255,255,.35);}
+.skin-equip-btn{font-size:.6rem;font-weight:800;padding:.18rem .5rem;border-radius:99px;border:none;
+  cursor:pointer;font-family:'Nunito',sans-serif;}
+.skin-equip-btn.buy{background:var(--green);color:#fff;}
+.skin-equip-btn.equip{background:rgba(245,200,66,.25);color:var(--gold);border:1px solid rgba(245,200,66,.4);}
+.skin-equip-btn.equipped-lbl{background:rgba(255,255,255,.1);color:rgba(255,255,255,.4);}
+
+
+/* ── RANKING SCREEN ─────────────────────────────────────────── */
+#scr-rank{position:fixed;inset:0;z-index:100;
+  background:linear-gradient(160deg,#c07030,#6a3010);
+  display:flex;flex-direction:column;}
+.rank-header{padding:.85rem 1.1rem;display:flex;align-items:center;gap:.75rem;
+  background:rgba(0,0,0,.22);border-bottom:1px solid rgba(255,255,255,.08);}
+.rank-title{font-size:1.1rem;font-weight:900;color:var(--gold);flex:1;}
+.rank-reset-info{font-size:.58rem;font-weight:700;color:rgba(255,255,255,.3);
+  text-align:right;line-height:1.4;}
+/* tabs */
+.rank-tabs{display:flex;background:rgba(0,0,0,.2);border-bottom:1px solid rgba(255,255,255,.07);}
+.rank-tab{flex:1;padding:.65rem;font-family:'Nunito',sans-serif;font-size:.78rem;
+  font-weight:800;color:rgba(255,255,255,.4);background:none;border:none;
+  cursor:pointer;border-bottom:2.5px solid transparent;transition:.2s;}
+.rank-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+/* list */
+.rank-body{flex:1;overflow-y:auto;padding:.7rem;}
+.rank-row{display:flex;align-items:center;gap:.7rem;padding:.65rem .8rem;
+  background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);
+  border-radius:12px;margin-bottom:.5rem;transition:.15s;}
+.rank-row.me{background:rgba(245,200,66,.08);border-color:rgba(245,200,66,.28);}
+.rank-pos{font-size:1rem;font-weight:900;min-width:28px;text-align:center;}
+.rank-pos.top1{color:#FFD700;text-shadow:0 0 8px #FFD70088;}
+.rank-pos.top2{color:#C0C0C0;}
+.rank-pos.top3{color:#cd7f32;}
+.rank-avatar{width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:900;
+  color:#fff;flex-shrink:0;}
+.rank-info{flex:1;min-width:0;}
+.rank-nick{font-size:.82rem;font-weight:800;color:#fff;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rank-badge-row{display:flex;align-items:center;gap:4px;margin-top:1px;}
+.rank-val{font-size:.85rem;font-weight:900;color:var(--gold);white-space:nowrap;flex-shrink:0;}
+.rank-val.coins-val{color:#FFD700;}
+.rank-empty{text-align:center;padding:3rem;color:rgba(255,255,255,.22);font-size:.85rem;font-weight:700;}
+.rank-loading{text-align:center;padding:2rem;color:rgba(255,255,255,.3);font-size:.8rem;animation:blink .8s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+/* monthly countdown */
+.rank-countdown{font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);
+  text-align:center;padding:.5rem;border-top:1px solid rgba(255,255,255,.05);margin-top:.3rem;}
+
+/* ── TOP BAR rank display ───────────────────────────────────── */
+.gb-prank{font-size:.55rem;font-weight:800;padding:1px 5px;border-radius:99px;
+  margin-top:1px;display:inline-block;}
+.gb-pskin{font-size:.9rem;margin-right:2px;}
+
 </style>
 </head>
 <body>
@@ -324,12 +420,57 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     </div>
   </div>
   <div class="mn-body">
-    <div class="mn-art">🎲</div>
+    <div class="mn-art" style="margin-bottom:-.3rem">🎲</div>
     <div class="mn-title">Damas</div>
     <div class="mn-sub">DAMAS BRASILEIRAS</div>
-    <div class="mn-btns" style="margin-top:.5rem">
-      <button class="btn btn-green" id="btn-online">🌐 Jogo Online</button>
+    <div class="mn-profile">
+      <div class="mn-rank-row">
+        <span class="mn-rank-badge" id="mn-rank">🥉 Cobre I</span>
+        <span class="mn-coins-txt" id="mn-coins">🪙 0</span>
+      </div>
+      <div class="xp-bar-bg"><div class="xp-bar-fill" id="mn-xp-bar" style="width:0%"></div></div>
+      <div class="xp-txt" id="mn-xp-txt">0 / 100 XP</div>
     </div>
+    <div class="mn-btns">
+      <button class="btn btn-green" id="btn-online">🌐 Jogo Online</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+        <button class="btn btn-orange" id="btn-shop">🛍️ Loja</button>
+        <button class="btn btn-orange" id="btn-rank">🏆 Ranking</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RANKING -->
+<div id="scr-rank" class="hidden">
+  <div class="rank-header">
+    <button class="back-btn" id="btn-back-rank">‹</button>
+    <div class="rank-title">🏆 Ranking Global</div>
+    <div class="rank-reset-info" id="rank-reset-info">Reset em:<br>calculando...</div>
+  </div>
+  <div class="rank-tabs">
+    <button class="rank-tab active" id="tab-patente" onclick="switchTab('patente')">🎖️ Patente</button>
+    <button class="rank-tab" id="tab-moedas" onclick="switchTab('moedas')">🪙 Moedas</button>
+    <button class="rank-tab" id="tab-vitorias" onclick="switchTab('vitorias')">⚔️ Vitórias</button>
+  </div>
+  <div class="rank-body" id="rank-list">
+    <div class="rank-loading">Carregando ranking...</div>
+  </div>
+  <div class="rank-countdown" id="rank-countdown"></div>
+</div>
+
+<!-- SHOP -->
+<div id="scr-shop" class="hidden">
+  <div class="shop-header">
+    <button class="back-btn" id="btn-back-shop">‹</button>
+    <div class="shop-title">🛍️ Loja de Skins</div>
+    <div class="shop-coins" id="shop-coins-disp">🪙 0</div>
+  </div>
+  <div class="shop-body">
+    <div class="shop-sec">Skins de Países</div>
+    <div class="skins-grid" id="grid-paises"></div>
+    <div class="shop-sec">Skins Especiais</div>
+    <div class="skins-grid" id="grid-especiais"></div>
   </div>
 </div>
 
@@ -354,14 +495,14 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <div class="gb-top">
     <div class="gb-player">
       <div class="gb-avatar" id="gb-av1" style="background:radial-gradient(135deg,#ff7755,#aa2208)">?</div>
-      <div><div class="gb-pname" id="gb-n1">–</div><div class="gb-pcount" id="gb-c1">12 ●</div></div>
+      <div><div class="gb-pname" id="gb-n1">–</div><div class="gb-pcount" id="gb-c1">12 ●</div><div class="gb-prank" id="gb-r1" style="color:#cd7f32;background:rgba(205,127,50,.15)">🥉 CI</div></div>
     </div>
     <div class="gb-center">
       <div class="gb-turn theirs" id="gb-turn">...</div>
     </div>
     <div class="gb-player right">
       <div class="gb-avatar" id="gb-av2" style="background:radial-gradient(135deg,#6a5040,#1a0e04)">?</div>
-      <div style="text-align:right"><div class="gb-pname" id="gb-n2">–</div><div class="gb-pcount" id="gb-c2">12 ●</div></div>
+      <div style="text-align:right"><div class="gb-pname" id="gb-n2">–</div><div class="gb-pcount" id="gb-c2">12 ●</div><div class="gb-prank" id="gb-r2" style="color:#cd7f32;background:rgba(205,127,50,.15)">🥉 CI</div></div>
     </div>
   </div>
   <div class="gb-board-wrap"><div id="board"></div></div>
@@ -392,6 +533,7 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <div class="go-icon" id="go-ic">🏆</div>
   <div class="go-title" id="go-ttl">VITÓRIA!</div>
   <div class="go-sub" id="go-sub">Você dominou o tabuleiro!</div>
+  <div id="go-reward" style="font-size:.75rem;font-weight:700;color:var(--gold);margin-top:-.3rem;opacity:.85"></div>
   <div class="go-btns">
     <button class="btn btn-green" id="btn-rematch">♟ Revanche</button>
     <button class="btn btn-orange" id="btn-go-menu">Menu</button>
@@ -683,12 +825,366 @@ document.addEventListener('touchstart',()=>ensureCtx(),{once:true});
 
 
 
+
+// ══════════════════════════════════════════════════════════════
+// ── RANKS & SKINS DATA ────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+const RANKS=[
+  {name:'Cobre I',   short:'CI',   emoji:'🥉',color:'#cd7f32',xp:0,    tier:0},
+  {name:'Cobre II',  short:'CII',  emoji:'🥉',color:'#cd7f32',xp:100,  tier:0},
+  {name:'Cobre III', short:'CIII', emoji:'🥉',color:'#cd7f32',xp:250,  tier:0},
+  {name:'Cobre IV',  short:'CIV',  emoji:'🥉',color:'#cd7f32',xp:450,  tier:0},
+  {name:'Cobre V',   short:'CV',   emoji:'🥉',color:'#cd7f32',xp:700,  tier:0},
+  {name:'Prata I',   short:'PI',   emoji:'🥈',color:'#c0c0c0',xp:1000, tier:1},
+  {name:'Prata II',  short:'PII',  emoji:'🥈',color:'#c0c0c0',xp:1350, tier:1},
+  {name:'Prata III', short:'PIII', emoji:'🥈',color:'#c0c0c0',xp:1750, tier:1},
+  {name:'Prata IV',  short:'PIV',  emoji:'🥈',color:'#c0c0c0',xp:2200, tier:1},
+  {name:'Prata V',   short:'PV',   emoji:'🥈',color:'#c0c0c0',xp:2700, tier:1},
+  {name:'Platina I', short:'PLI',  emoji:'🔷',color:'#00bcd4',xp:3300, tier:2},
+  {name:'Platina II',short:'PLII', emoji:'🔷',color:'#00bcd4',xp:4000, tier:2},
+  {name:'Platina III',short:'PLIII',emoji:'🔷',color:'#00bcd4',xp:4800,tier:2},
+  {name:'Platina IV',short:'PLIV', emoji:'🔷',color:'#00bcd4',xp:5700, tier:2},
+  {name:'Platina V', short:'PLV',  emoji:'🔷',color:'#00bcd4',xp:6700, tier:2},
+  {name:'Ouro I',    short:'OI',   emoji:'🥇',color:'#FFD700',xp:7800, tier:3},
+  {name:'Ouro II',   short:'OII',  emoji:'🥇',color:'#FFD700',xp:9000, tier:3},
+  {name:'Ouro III',  short:'OIII', emoji:'🥇',color:'#FFD700',xp:10300,tier:3},
+  {name:'Ouro IV',   short:'OIV',  emoji:'🥇',color:'#FFD700',xp:11700,tier:3},
+  {name:'Ouro V',    short:'OV',   emoji:'🥇',color:'#FFD700',xp:13200,tier:3},
+  {name:'Diamante I',short:'DI',   emoji:'💎',color:'#4fc3f7',xp:14800,tier:4},
+  {name:'Diamante II',short:'DII', emoji:'💎',color:'#4fc3f7',xp:16500,tier:4},
+  {name:'Diamante III',short:'DIII',emoji:'💎',color:'#4fc3f7',xp:18300,tier:4},
+  {name:'Diamante IV',short:'DIV', emoji:'💎',color:'#4fc3f7',xp:20200,tier:4},
+  {name:'Diamante V',short:'DV',   emoji:'💎',color:'#4fc3f7',xp:22200,tier:4},
+  {name:'Mestre',    short:'M',    emoji:'👑',color:'#ff4081',xp:24300,tier:5},
+];
+const SKINS=[
+  // FREE — Padrão simples
+  {id:'default', name:'Padrão',        emoji:'⚫',price:0,    owned:true,
+   gr:'radial-gradient(circle at 35% 30%,#ff7755,#cc3318,#7a1a08)',
+   gb:'radial-gradient(circle at 35% 30%,#6a5040,#2a1a0a,#1a0e04)',sec:'paises'},
+
+  // PAÍSES — Preços escalonados por beleza visual
+  {id:'japao',    name:'🇯🇵 Japão',     emoji:'🇯🇵',price:250,
+   gr:'radial-gradient(circle at 35% 30%,#ff4444,#cc0000,#880000)',
+   gb:'radial-gradient(circle at 35% 30%,#f5f5f5,#dddddd,#aaaaaa)',sec:'paises'},
+
+  {id:'brasil',   name:'🇧🇷 Brasil',    emoji:'🇧🇷',price:300,
+   gr:'radial-gradient(circle at 35% 30%,#33ee66,#00aa33,#006622)',
+   gb:'radial-gradient(circle at 35% 30%,#ffe033,#ddaa00,#997700)',sec:'paises'},
+
+  {id:'portugal', name:'🇵🇹 Portugal',  emoji:'🇵🇹',price:300,
+   gr:'radial-gradient(circle at 35% 30%,#33cc55,#008822,#004411)',
+   gb:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',sec:'paises'},
+
+  {id:'italia',   name:'🇮🇹 Itália',    emoji:'🇮🇹',price:350,
+   gr:'radial-gradient(circle at 35% 30%,#44cc66,#00882a,#004415)',
+   gb:'radial-gradient(circle at 35% 30%,#ff2222,#bb0000,#770000)',sec:'paises'},
+
+  {id:'mexico',   name:'🇲🇽 México',    emoji:'🇲🇽',price:350,
+   gr:'radial-gradient(circle at 35% 30%,#44cc66,#009933,#004d1a)',
+   gb:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',sec:'paises'},
+
+  {id:'usa',      name:'🇺🇸 EUA',       emoji:'🇺🇸',price:400,
+   gr:'radial-gradient(circle at 35% 30%,#ff6666,#dd2222,#990000)',
+   gb:'radial-gradient(circle at 35% 30%,#4466ff,#2244dd,#001199)',sec:'paises'},
+
+  {id:'franca',   name:'🇫🇷 França',    emoji:'🇫🇷',price:400,
+   gr:'radial-gradient(circle at 35% 30%,#5566ff,#2233dd,#0011aa)',
+   gb:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',sec:'paises'},
+
+  {id:'argentina',name:'🇦🇷 Argentina', emoji:'🇦🇷',price:450,
+   gr:'radial-gradient(circle at 35% 30%,#66bbff,#3388dd,#0055aa)',
+   gb:'radial-gradient(circle at 35% 30%,#eeeeff,#ccccee,#9999cc)',sec:'paises'},
+
+  {id:'alemanha', name:'🇩🇪 Alemanha',  emoji:'🇩🇪',price:500,
+   gr:'radial-gradient(circle at 35% 30%,#555555,#222222,#000000)',
+   gb:'radial-gradient(circle at 35% 30%,#ffcc00,#dd9900,#996600)',sec:'paises'},
+
+  {id:'espanha',  name:'🇪🇸 Espanha',   emoji:'🇪🇸',price:550,
+   gr:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',
+   gb:'radial-gradient(circle at 35% 30%,#ffcc00,#dd9900,#886600)',sec:'paises'},
+
+  // ESPECIAIS — Quanto mais elaborado visualmente, mais caro
+  {id:'caveira',  name:'💀 Caveira',    emoji:'💀',price:600,
+   gr:'radial-gradient(circle at 35% 30%,#999999,#555555,#222222)',
+   gb:'radial-gradient(circle at 35% 30%,#ccbbaa,#aa9988,#775544)',sec:'especiais'},
+
+  {id:'rosa',     name:'🌹 Rosa',       emoji:'🌹',price:750,
+   gr:'radial-gradient(circle at 30% 25%,#ffaad4,#ee4499,#aa1166)',
+   gb:'radial-gradient(circle at 30% 25%,#ffd4ee,#ff88cc,#cc44aa)',sec:'especiais'},
+
+  {id:'gelo',     name:'❄️ Gelo',       emoji:'❄️',price:900,
+   gr:'radial-gradient(circle at 30% 25%,#cceeff,#66bbee,#0077aa)',
+   gb:'radial-gradient(circle at 30% 25%,#eef8ff,#aaddff,#55aadd)',sec:'especiais'},
+
+  {id:'fogo',     name:'🔥 Fogo',       emoji:'🔥',price:1100,
+   gr:'radial-gradient(circle at 30% 25%,#ffdd00,#ff6600,#cc2200)',
+   gb:'radial-gradient(circle at 30% 25%,#ff4400,#cc1100,#880000)',sec:'especiais'},
+
+  {id:'neon',     name:'⚡ Neon',       emoji:'⚡',price:1300,
+   gr:'radial-gradient(circle at 30% 25%,#00ffcc,#00cc88,#007744)',
+   gb:'radial-gradient(circle at 30% 25%,#ccff00,#88dd00,#447700)',sec:'especiais'},
+
+  {id:'galaxia',  name:'🌌 Galáxia',    emoji:'🌌',price:1600,
+   gr:'radial-gradient(circle at 30% 25%,#dd88ff,#9922ee,#550099)',
+   gb:'radial-gradient(circle at 30% 25%,#4422bb,#110077,#050033)',sec:'especiais'},
+
+  {id:'ouro_s',   name:'🏆 Ouro Puro',  emoji:'🏆',price:2000,
+   gr:'radial-gradient(circle at 30% 25%,#fff0aa,#ffcc00,#cc9900)',
+   gb:'radial-gradient(circle at 30% 25%,#ffd700,#cc9900,#886600)',sec:'especiais'},
+
+  {id:'diamante_s',name:'💎 Diamante',  emoji:'💎',price:2800,
+   gr:'radial-gradient(circle at 30% 25%,#ffffff,#aaeeff,#33bbee)',
+   gb:'radial-gradient(circle at 30% 25%,#ccffff,#66ddff,#0099cc)',sec:'especiais'},
+
+  {id:'arcoiris', name:'🌈 Arco-Íris',  emoji:'🌈',price:4500,
+   gr:'radial-gradient(circle at 30% 25%,#ff4444,#ff8800,#ffdd00)',
+   gb:'radial-gradient(circle at 30% 25%,#00ee88,#0088ff,#8844ff)',sec:'especiais'},
+];
+
+
+function getRank(xp){let r=RANKS[0];for(const rk of RANKS){if(xp>=rk.xp)r=rk;else break;}return r;}
+function getRankIdx(xp){let i=0;for(let j=0;j<RANKS.length;j++){if(xp>=RANKS[j].xp)i=j;else break;}return i;}
+function getSkin(id){return SKINS.find(s=>s.id===id)||SKINS[0];}
+
+
+// ── RANKING ───────────────────────────────────────────────────
+let currentTab = 'patente';
+let rankUsers = []; // cached user list
+
+function switchTab(tab){
+  currentTab = tab;
+  ['patente','moedas','vitorias'].forEach(t=>{
+    const el = $('tab-'+t);
+    if(el) el.className = 'rank-tab' + (t===tab?' active':'');
+  });
+  renderRankList();
+}
+
+async function loadRanking(){
+  const list = $('rank-list');
+  if(list) list.innerHTML = '<div class="rank-loading">Carregando...</div>';
+  try {
+    const snap = await get(ref(db,'damas_users'));
+    rankUsers = [];
+    if(snap.exists()){
+      snap.forEach(child=>{
+        const d = child.val();
+        rankUsers.push({uid:child.key, ...d});
+      });
+    }
+    renderRankList();
+    updateResetInfo();
+  } catch(e){
+    if(list) list.innerHTML = '<div class="rank-empty">Erro ao carregar</div>';
+  }
+}
+
+function renderRankList(){
+  const list = $('rank-list');
+  if(!list) return;
+  let sorted = [...rankUsers];
+  if(currentTab === 'patente')   sorted.sort((a,b) => (b.xp||0)-(a.xp||0));
+  else if(currentTab === 'moedas')   sorted.sort((a,b) => (b.coins||0)-(a.coins||0));
+  else if(currentTab === 'vitorias') sorted.sort((a,b) => (b.wins||0)-(a.wins||0));
+
+  if(!sorted.length){ list.innerHTML='<div class="rank-empty">Nenhum jogador ainda</div>'; return; }
+  list.innerHTML = '';
+  sorted.slice(0,50).forEach((u,i)=>{
+    const pos = i+1;
+    const isMe = ME && u.uid === ME.uid;
+    const rank = getRank(u.xp||0);
+    const sk = getSkin(u.skin||'default');
+    const posClass = pos===1?'top1':pos===2?'top2':pos===3?'top3':'';
+    const posTxt = pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'#'+pos;
+    let valTxt='', valClass='rank-val';
+    if(currentTab==='patente'){
+      valTxt = rank.emoji+' '+rank.name;
+      valClass += '';
+    } else if(currentTab==='moedas'){
+      valTxt = '🪙 '+(u.coins||0).toLocaleString();
+      valClass += ' coins-val';
+    } else {
+      valTxt = '⚔️ '+(u.wins||0)+' vitórias';
+    }
+    const row = document.createElement('div');
+    row.className = 'rank-row' + (isMe?' me':'');
+    row.innerHTML = `
+      <div class="rank-pos ${posClass}">${posTxt}</div>
+      <div class="rank-avatar" style="background:${sk.gr}">${(u.username||u.nick||'?')[0].toUpperCase()}</div>
+      <div class="rank-info">
+        <div class="rank-nick">${esc(u.username||u.nick||'Jogador')}${isMe?' <span style="color:var(--gold);font-size:.6rem">(você)</span>':''}</div>
+        <div class="rank-badge-row">
+          <span class="rank-chip" style="border:1px solid ${rank.color};color:${rank.color}">${rank.emoji}${rank.short}</span>
+          <span style="font-size:.6rem;color:rgba(255,255,255,.3);font-weight:600">${u.wins||0}V ${u.losses||0}D</span>
+        </div>
+      </div>
+      <div class="${valClass}">${valTxt}</div>`;
+    list.appendChild(row);
+  });
+}
+
+function updateResetInfo(){
+  // Monthly reset: first day of next month
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth()+1, 1, 0, 0, 0);
+  const diff = next - now;
+  const days  = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins  = Math.floor((diff % 3600000) / 60000);
+  const info  = $('rank-reset-info');
+  const cntd  = $('rank-countdown');
+  const txt = `Patentes resetam em ${days}d ${hours}h ${mins}m`;
+  if(info) info.innerHTML = `Reset XP em:<br>${days}d ${hours}h ${mins}m`;
+  if(cntd) cntd.textContent = '⏱️ '+txt+' · Moedas nunca resetam';
+}
+
+// Monthly XP reset check — runs when user logs in
+async function checkMonthlyReset(){
+  if(!ME) return;
+  const snap = await get(ref(db,`damas_users/${ME.uid}/lastReset`));
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${now.getMonth()+1}`;
+  const lastReset = snap.exists() ? snap.val() : null;
+  if(lastReset !== thisMonth){
+    // Reset XP/rank but KEEP coins, skin, ownedSkins
+    userData.xp = 0;
+    await dbUp(ref(db,`damas_users/${ME.uid}`),{xp:0, lastReset:thisMonth});
+    updateMenuProfile();
+    if(lastReset !== null){ // don't notify on first login ever
+      notify('🔄 Reset mensal! XP zerado. Moedas mantidas.','warn');
+    }
+  }
+}
+
+$('btn-rank').onclick=()=>{
+  playBtnClick();
+  scrShowAll('scr-rank');
+  loadRanking();
+  updateResetInfo();
+};
+$('btn-back-rank').onclick=()=>{playBtnClick();scrShowAll('scr-menu');};
+// refresh countdown every minute
+setInterval(updateResetInfo, 60000);
+
+// ── User data ─────────────────────────────────────────────────
+let userData={xp:0,coins:0,skin:'default',ownedSkins:['default'],wins:0,losses:0};
+let goAwarded=false; // prevent double-awarding
+
+async function loadUserData(){
+  if(!ME)return;
+  const snap=await get(ref(db,`damas_users/${ME.uid}`));
+  if(snap.exists()){
+    const d=snap.val();
+    userData={
+      xp:d.xp||0,coins:d.coins||0,
+      skin:d.skin||'default',
+      ownedSkins:d.ownedSkins||['default'],
+      wins:d.wins||0,losses:d.losses||0
+    };
+    // Ensure username is stored for ranking
+    if(!d.username && ME.displayName){
+      await dbUp(ref(db,`damas_users/${ME.uid}`),{username:ME.displayName});
+    }
+  }else{
+    await set(ref(db,`damas_users/${ME.uid}`),{xp:0,coins:0,skin:'default',ownedSkins:['default'],wins:0,losses:0});
+  }
+  await checkMonthlyReset();
+  updateMenuProfile();
+}
+
+async function awardGame(won){
+  if(!ME||goAwarded)return;
+  goAwarded=true;
+  const rank=getRank(userData.xp);
+  const xpGain=won?30+rank.tier*5:5+rank.tier;
+  const coinsGain=won?50+rank.tier*10:10;
+  const oldIdx=getRankIdx(userData.xp);
+  userData.xp+=xpGain; userData.coins+=coinsGain;
+  if(won)userData.wins++; else userData.losses++;
+  await dbUp(ref(db,`damas_users/${ME.uid}`),{
+    xp:userData.xp,coins:userData.coins,wins:userData.wins,losses:userData.losses
+  });
+  const newIdx=getRankIdx(userData.xp);
+  const rwd=$('go-reward');
+  if(rwd)rwd.textContent=`+${xpGain} XP  ·  +${coinsGain} 🪙`;
+  if(newIdx>oldIdx){
+    const nr=RANKS[newIdx];
+    setTimeout(()=>{notify(nr.emoji+' Subiu para '+nr.name+'! 🎉','ok');playKing();},600);
+  }
+  updateMenuProfile();
+}
+
+function updateMenuProfile(){
+  const rank=getRank(userData.xp);
+  const idx=getRankIdx(userData.xp);
+  const next=idx<RANKS.length-1?RANKS[idx+1].xp:null;
+  const pct=next?Math.round((userData.xp-rank.xp)/(next-rank.xp)*100):100;
+  const r=$('mn-rank'),ci=$('mn-coins'),xb=$('mn-xp-bar'),xt=$('mn-xp-txt');
+  if(r){r.textContent=rank.emoji+' '+rank.name;r.style.color=rank.color;}
+  if(ci)ci.textContent='🪙 '+userData.coins.toLocaleString();
+  if(xb)xb.style.width=pct+'%';
+  if(xt)xt.textContent=next?userData.xp+' / '+next+' XP':'MAX XP ✨';
+}
+
+// ── SHOP ──────────────────────────────────────────────────────
+function scrShowAll(id){['scr-load','scr-login','scr-menu','scr-rooms','scr-game','scr-shop','scr-rank'].forEach(s=>$(s)&&$(s).classList.add('hidden'));$(id).classList.remove('hidden');}
+
+function buildShop(){
+  ['paises','especiais'].forEach(sec=>{
+    const grid=$(('grid-'+sec));
+    if(!grid)return;
+    grid.innerHTML='';
+    SKINS.filter(s=>s.sec===sec).forEach(skin=>{
+      const owned=userData.ownedSkins.includes(skin.id)||skin.id==='default';
+      const equipped=userData.skin===skin.id;
+      const card=document.createElement('div');
+      card.className='skin-card'+(owned?' owned':'')+(equipped?' equipped':'');
+      card.innerHTML=`
+        <div class="skin-preview">
+          <div class="skin-ball" style="background:${skin.gr}"></div>
+          <div class="skin-ball" style="background:${skin.gb}"></div>
+        </div>
+        <div class="skin-name">${skin.name}</div>
+        <div class="skin-price ${owned?'owned-lbl':''}">${owned?(equipped?'✅ Equipada':'Possuída'):(skin.price===0?'Grátis':'🪙 '+skin.price)}</div>
+        <button class="skin-equip-btn ${equipped?'equipped-lbl':owned?'equip':'buy'}"
+          ${equipped?'disabled':''}>
+          ${equipped?'Equipada':owned?'Equipar':'Comprar'}
+        </button>`;
+      const btn=card.querySelector('button');
+      btn.onclick=async()=>{
+        if(equipped)return;
+        if(owned){
+          userData.skin=skin.id;
+          await dbUp(ref(db,`damas_users/${ME.uid}`),{skin:skin.id});
+          notify('Skin equipada: '+skin.name,'ok');playBtnClick();buildShop();updateMenuProfile();
+        }else{
+          if(userData.coins<skin.price){notify('Moedas insuficientes! 🪙','warn');return;}
+          userData.coins-=skin.price;
+          userData.ownedSkins=[...userData.ownedSkins,skin.id];
+          userData.skin=skin.id;
+          await dbUp(ref(db,`damas_users/${ME.uid}`),{
+            coins:userData.coins,ownedSkins:userData.ownedSkins,skin:skin.id
+          });
+          notify('Skin comprada e equipada! '+skin.emoji,'ok');playKing();buildShop();updateMenuProfile();
+        }
+        $('shop-coins-disp').textContent='🪙 '+userData.coins.toLocaleString();
+      };
+      grid.appendChild(card);
+    });
+  });
+  $('shop-coins-disp').textContent='🪙 '+userData.coins.toLocaleString();
+}
+
+$('btn-shop').onclick=()=>{playBtnClick();buildShop();scrShowAll('scr-shop');};
+$('btn-back-shop').onclick=()=>{playBtnClick();scrShowAll('scr-menu');};
+
 // ── Utils ──────────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n2m=n=>n.toLowerCase().replace(/[^a-z0-9]/g,'x')+'@damas.game';
 const hpw=s=>{let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36);};
-function scrShow(id){['scr-load','scr-login','scr-menu','scr-rooms','scr-game'].forEach(s=>$(s).classList.add('hidden'));$(id).classList.remove('hidden');}
+function scrShow(id){['scr-load','scr-login','scr-menu','scr-rooms','scr-game','scr-shop','scr-rank'].forEach(s=>$(s)&&$(s).classList.add('hidden'));$(id).classList.remove('hidden');}
 function mShow(id){$(id).classList.remove('hidden');}
 function mHide(id){$(id).classList.add('hidden');}
 function notify(msg,type='ok'){
@@ -711,7 +1207,7 @@ $('btn-reg').onclick=async()=>{
   $('lg-err').textContent='';
   if(nick.length<3)return $('lg-err').textContent='⚠ Nick precisa de 3+ letras';
   if(pw.length<6)return $('lg-err').textContent='⚠ Senha mín. 6 caracteres';
-  try{const c=await createUserWithEmailAndPassword(auth,n2m(nick),pw);await updateProfile(c.user,{displayName:nick});}
+  try{const c=await createUserWithEmailAndPassword(auth,n2m(nick),pw);await updateProfile(c.user,{displayName:nick});await set(ref(db,`damas_users/${c.user.uid}`),{username:nick,xp:0,coins:0,skin:'default',ownedSkins:['default'],wins:0,losses:0,lastReset:null});}
   catch(e){$('lg-err').textContent=e.code==='auth/email-already-in-use'?'⚠ Nick já existe!':'⚠ '+e.code;}
 };
 $('btn-logout').onclick=async()=>{await doLeave();await signOut(auth);};
@@ -723,6 +1219,7 @@ onAuthStateChanged(auth,user=>{
     $('mn-av').textContent=(user.displayName||'?')[0].toUpperCase();
     $('mn-uname').textContent=user.displayName||'Jogador';
     scrShow('scr-menu');startLobby();
+    loadUserData();
   }else{stopLobby();stopRoom();stopChat();scrShow('scr-login');}
 });
 setTimeout(()=>$('scr-load').classList.add('hidden'),3200);
@@ -782,7 +1279,7 @@ async function createRoom(name,isPrivate,pw){
   RID=rid;HOST=true;MYCOLOR='red';
   await set(r,{id:rid,name,isPrivate,password:isPrivate?hpw(pw):'',
     host:ME.uid,hostName:ME.displayName||'Host',
-    players:{[ME.uid]:{uid:ME.uid,name:ME.displayName||'Jogador',color:'red'}},
+    players:{[ME.uid]:{uid:ME.uid,name:ME.displayName||'Jogador',color:'red',skin:userData.skin,rank:getRank(userData.xp).short}},
     state:'waiting',board:null,turn:'red',winner:null,chainCapture:null});
   onDisconnect(ref(db,`damas_rooms/${rid}/players/${ME.uid}`)).remove();
   startRoom(rid);
@@ -805,7 +1302,7 @@ $('btn-confirm-join').onclick=()=>{
 async function doJoin(id,r){
   if((r.players?Object.keys(r.players).length:0)>=2)return notify('Sala cheia!','warn');
   RID=id;HOST=false;MYCOLOR='black';
-  await dbUp(ref(db,`damas_rooms/${id}/players/${ME.uid}`),{uid:ME.uid,name:ME.displayName||'Jogador',color:'black'});
+  await dbUp(ref(db,`damas_rooms/${id}/players/${ME.uid}`),{uid:ME.uid,name:ME.displayName||'Jogador',color:'black',skin:userData.skin,rank:getRank(userData.xp).short});
   onDisconnect(ref(db,`damas_rooms/${id}/players/${ME.uid}`)).remove();
   startRoom(id);$('wr-name').textContent='♟ '+r.name;mShow('mdl-wait');
 }
@@ -823,6 +1320,7 @@ function startRoom(rid){
     refreshWaiting();
     if(RDATA.state==='playing'){
       mHide('mdl-wait');scrShow('scr-game');
+      goAwarded=false;
       startChat(rid);
       const prevBoard=boardArr;
       boardArr=b2a(RDATA.board);
@@ -900,7 +1398,7 @@ function startChat(rid){
       const el=document.createElement('div');
       el.className='cmsg'+(m.system?' sys':'');
       el.style.borderLeftColor=m.system?'rgba(255,255,255,.08)':m.color;
-      el.innerHTML=m.system?esc(m.text):`<span class="cnick" style="color:${m.color}">${esc(m.nick)}</span>${esc(m.text)}`;
+      const rankBadge=m.rankEmoji?`<span class="rank-chip" style="border:1px solid ${m.rankColor||'#888'};color:${m.rankColor||'#888'}">${m.rankEmoji}${m.rankName||''}</span>`:'';      el.innerHTML=m.system?esc(m.text):`${rankBadge}<span class="cnick" style="color:${m.color}">${esc(m.nick)}</span>${esc(m.text)}`;
       msgs.appendChild(el);
     });
     msgs.scrollTop=msgs.scrollHeight;
@@ -915,7 +1413,8 @@ async function sendChat(){
   if(!RID||!ME)return;
   const inp=$('chat-inp'),text=inp.value.trim();if(!text)return;inp.value='';
   const color=myNickColor||(MYCOLOR==='red'?'#ff7755':'#aaaaaa');
-  await push(ref(db,`damas_rooms/${RID}/chat`),{uid:ME.uid,nick:ME.displayName||'?',text,color,ts:Date.now(),system:false});
+  const myRank=getRank(userData.xp);
+  await push(ref(db,`damas_rooms/${RID}/chat`),{uid:ME.uid,nick:ME.displayName||'?',text,color,ts:Date.now(),system:false,rankEmoji:myRank.emoji,rankName:myRank.short,rankColor:myRank.color});
 }
 $('chat-send').onclick=sendChat;
 $('chat-inp').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat();}};
@@ -1149,6 +1648,11 @@ function renderBoard(){
     if(piece){
       const pe=document.createElement('div');
       pe.className='piece '+(piece.color==='red'?'rp':'bp')+(piece.king?' king':'');
+      // Apply skin gradient from player data
+      const players=RDATA?.players||{};
+      const pdata=Object.values(players).find(p=>p.color===piece.color);
+      const sk=getSkin(pdata?.skin||'default');
+      pe.style.background=piece.color==='red'?sk.gr:sk.gb;
       const canPick=myTurn&&piece.color===MYCOLOR&&movablePieces.has(ck);
       if(canPick&&!mustFrom)pe.classList.add('mine');
       if(canPick&&mustFrom&&mustFrom[0]===r&&mustFrom[1]===c)pe.classList.add('mine');
@@ -1231,9 +1735,17 @@ function updateTopBar(){
   let rname='Vermelho',bname='Preto';
   Object.values(players).forEach(p=>{if(p.color==='red')rname=p.name;else if(p.color==='black')bname=p.name;});
   const c=countPieces(boardArr);
-  $('gb-av1').textContent=(rname[0]||'R').toUpperCase();
-  $('gb-av2').textContent=(bname[0]||'B').toUpperCase();
+  const rp=Object.values(players).find(p=>p.color==='red');
+  const bp=Object.values(players).find(p=>p.color==='black');
+  const rSk=getSkin(rp?.skin||'default'),bSk=getSkin(bp?.skin||'default');
+  const rRk=RANKS.find(r=>r.short===(rp?.rank||'CI'))||RANKS[0];
+  const bRk=RANKS.find(r=>r.short===(bp?.rank||'CI'))||RANKS[0];
+  $('gb-av1').style.background=rSk.gr;$('gb-av1').textContent=(rname[0]||'R').toUpperCase();
+  $('gb-av2').style.background=bSk.gb;$('gb-av2').textContent=(bname[0]||'B').toUpperCase();
   $('gb-n1').textContent=rname;$('gb-n2').textContent=bname;
+  const r1=$('gb-r1'),r2=$('gb-r2');
+  if(r1){r1.textContent=rRk.emoji+' '+rRk.short;r1.style.color=rRk.color;r1.style.background='rgba(0,0,0,.25)';}
+  if(r2){r2.textContent=bRk.emoji+' '+bRk.short;r2.style.color=bRk.color;r2.style.background='rgba(0,0,0,.25)';}
   $('gb-c1').textContent=c.red+' ●';$('gb-c2').textContent=c.black+' ●';
   const myTurn=RDATA.turn===MYCOLOR;
   const turnName=RDATA.turn==='red'?rname:bname;
@@ -1247,6 +1759,7 @@ function updateTopBar(){
 function showGO(winner){
   const win=winner===MYCOLOR;
   setTimeout(()=>win?playWin():playLose(),200);
+  awardGame(win);
   $('go-ic').textContent=win?'🏆':'💀';
   $('go-ttl').textContent=win?'VITÓRIA!':'DERROTA';
   $('go-ttl').style.color=win?'var(--gold)':'#ff5535';
