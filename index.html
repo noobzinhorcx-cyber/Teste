@@ -603,7 +603,19 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
       <div class="hidden" id="adm-panel">
         <div class="adm-unlocked">
           <div class="adm-title">✨ MODO ADM ATIVO ✨</div>
-          <div class="cfg-lbl" style="font-size:.75rem">Cor do nick no chat:</div>
+          <div style="display:flex;flex-direction:column;gap:.55rem;margin-bottom:.6rem">
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <span class="cfg-lbl" style="font-size:.72rem;min-width:60px">🪙 Moedas</span>
+              <input class="inp" id="adm-coins" type="number" min="0" placeholder="Ex: 5000" style="font-size:.82rem;padding:.4rem .7rem">
+              <button class="btn btn-orange" id="btn-adm-coins" style="width:auto;padding:.4rem .8rem;font-size:.78rem">Set</button>
+            </div>
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <span class="cfg-lbl" style="font-size:.72rem;min-width:60px">⭐ XP</span>
+              <input class="inp" id="adm-xp" type="number" min="0" placeholder="Ex: 14800" style="font-size:.82rem;padding:.4rem .7rem">
+              <button class="btn btn-orange" id="btn-adm-xp" style="width:auto;padding:.4rem .8rem;font-size:.78rem">Set</button>
+            </div>
+          </div>
+          <div class="cfg-lbl" style="font-size:.75rem">🎨 Cor do nick no chat:</div>
           <div class="color-grid" id="color-grid"></div>
         </div>
       </div>
@@ -833,6 +845,30 @@ document.getElementById('btn-adm-ok').onclick=()=>{
   }
 };
 
+// ADM: set coins
+document.getElementById('btn-adm-coins').onclick=async()=>{
+  if(!ME)return;
+  const v=parseInt(document.getElementById('adm-coins').value);
+  if(isNaN(v)||v<0)return notify('Valor inválido','warn');
+  userData.coins=v;
+  await dbUp(ref(db,`damas_users/${ME.uid}`),{coins:v});
+  updateMenuProfile();
+  notify('🪙 Moedas definidas: '+v.toLocaleString(),'ok');
+  playKing();
+};
+// ADM: set XP/rank
+document.getElementById('btn-adm-xp').onclick=async()=>{
+  if(!ME)return;
+  const v=parseInt(document.getElementById('adm-xp').value);
+  if(isNaN(v)||v<0)return notify('Valor inválido','warn');
+  userData.xp=v;
+  await dbUp(ref(db,`damas_users/${ME.uid}`),{xp:v});
+  updateMenuProfile();
+  const rk=getRank(v);
+  notify(rk.emoji+' Patente: '+rk.name,'ok');
+  playKing();
+};
+
 // Activate audio on first user interaction
 document.addEventListener('click',()=>ensureCtx(),{once:true});
 document.addEventListener('touchstart',()=>ensureCtx(),{once:true});
@@ -872,88 +908,88 @@ const RANKS=[
   {name:'Mestre',    short:'M',    emoji:'👑',color:'#ff4081',xp:24300,tier:5},
 ];
 const SKINS=[
-  // FREE — Padrão simples
-  {id:'default', name:'Padrão',        emoji:'⚫',price:0,    owned:true,
-   gr:'radial-gradient(circle at 35% 30%,#ff7755,#cc3318,#7a1a08)',
-   gb:'radial-gradient(circle at 35% 30%,#6a5040,#2a1a0a,#1a0e04)',sec:'paises'},
+  // FREE — Padrão
+  {id:'default', name:'Padrão', emoji:'⚫', flag:'', price:0, owned:true,
+   gr:'radial-gradient(circle at 35% 30%,#ff9977,#cc3318,#7a1a08)',
+   gb:'radial-gradient(circle at 35% 30%,#8a6a50,#3a2a1a,#1a0e04)',sec:'paises'},
 
-  // PAÍSES — Preços escalonados por beleza visual
-  {id:'japao',    name:'🇯🇵 Japão',     emoji:'🇯🇵',price:250,
-   gr:'radial-gradient(circle at 35% 30%,#ff4444,#cc0000,#880000)',
-   gb:'radial-gradient(circle at 35% 30%,#f5f5f5,#dddddd,#aaaaaa)',sec:'paises'},
+  // PAÍSES
+  {id:'japao',    name:'🇯🇵 Japão',     emoji:'🇯🇵', flag:'🇯🇵', price:250,
+   gr:'radial-gradient(circle at 35% 30%,#ff6666,#ee0000,#990000)',
+   gb:'radial-gradient(circle at 35% 30%,#ffffff,#eeeeee,#cccccc)',sec:'paises'},
 
-  {id:'brasil',   name:'🇧🇷 Brasil',    emoji:'🇧🇷',price:300,
-   gr:'radial-gradient(circle at 35% 30%,#33ee66,#00aa33,#006622)',
-   gb:'radial-gradient(circle at 35% 30%,#ffe033,#ddaa00,#997700)',sec:'paises'},
+  {id:'brasil',   name:'🇧🇷 Brasil',    emoji:'🇧🇷', flag:'🇧🇷', price:300,
+   gr:'radial-gradient(circle at 35% 30%,#55ff88,#00cc44,#007722)',
+   gb:'radial-gradient(circle at 35% 30%,#ffee44,#ddaa00,#997700)',sec:'paises'},
 
-  {id:'portugal', name:'🇵🇹 Portugal',  emoji:'🇵🇹',price:300,
-   gr:'radial-gradient(circle at 35% 30%,#33cc55,#008822,#004411)',
-   gb:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',sec:'paises'},
+  {id:'portugal', name:'🇵🇹 Portugal',  emoji:'🇵🇹', flag:'🇵🇹', price:300,
+   gr:'radial-gradient(circle at 35% 30%,#55dd77,#009933,#005511)',
+   gb:'radial-gradient(circle at 35% 30%,#ff5555,#dd0000,#990000)',sec:'paises'},
 
-  {id:'italia',   name:'🇮🇹 Itália',    emoji:'🇮🇹',price:350,
-   gr:'radial-gradient(circle at 35% 30%,#44cc66,#00882a,#004415)',
-   gb:'radial-gradient(circle at 35% 30%,#ff2222,#bb0000,#770000)',sec:'paises'},
+  {id:'italia',   name:'🇮🇹 Itália',    emoji:'🇮🇹', flag:'🇮🇹', price:350,
+   gr:'radial-gradient(circle at 35% 30%,#55ee77,#00aa33,#006622)',
+   gb:'radial-gradient(circle at 35% 30%,#ff4444,#cc0000,#880000)',sec:'paises'},
 
-  {id:'mexico',   name:'🇲🇽 México',    emoji:'🇲🇽',price:350,
-   gr:'radial-gradient(circle at 35% 30%,#44cc66,#009933,#004d1a)',
-   gb:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',sec:'paises'},
+  {id:'mexico',   name:'🇲🇽 México',    emoji:'🇲🇽', flag:'🇲🇽', price:350,
+   gr:'radial-gradient(circle at 35% 30%,#55ee77,#00bb44,#006622)',
+   gb:'radial-gradient(circle at 35% 30%,#ff4444,#cc0000,#880000)',sec:'paises'},
 
-  {id:'usa',      name:'🇺🇸 EUA',       emoji:'🇺🇸',price:400,
-   gr:'radial-gradient(circle at 35% 30%,#ff6666,#dd2222,#990000)',
-   gb:'radial-gradient(circle at 35% 30%,#4466ff,#2244dd,#001199)',sec:'paises'},
+  {id:'usa',      name:'🇺🇸 EUA',       emoji:'🇺🇸', flag:'🇺🇸', price:400,
+   gr:'radial-gradient(circle at 35% 30%,#ff7777,#ee2222,#aa0000)',
+   gb:'radial-gradient(circle at 35% 30%,#5577ff,#2244ee,#0022bb)',sec:'paises'},
 
-  {id:'franca',   name:'🇫🇷 França',    emoji:'🇫🇷',price:400,
-   gr:'radial-gradient(circle at 35% 30%,#5566ff,#2233dd,#0011aa)',
-   gb:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',sec:'paises'},
+  {id:'franca',   name:'🇫🇷 França',    emoji:'🇫🇷', flag:'🇫🇷', price:400,
+   gr:'radial-gradient(circle at 35% 30%,#6677ff,#2233ee,#0011cc)',
+   gb:'radial-gradient(circle at 35% 30%,#ff4444,#cc0000,#880000)',sec:'paises'},
 
-  {id:'argentina',name:'🇦🇷 Argentina', emoji:'🇦🇷',price:450,
-   gr:'radial-gradient(circle at 35% 30%,#66bbff,#3388dd,#0055aa)',
-   gb:'radial-gradient(circle at 35% 30%,#eeeeff,#ccccee,#9999cc)',sec:'paises'},
+  {id:'argentina',name:'🇦🇷 Argentina', emoji:'🇦🇷', flag:'🇦🇷', price:450,
+   gr:'radial-gradient(circle at 35% 30%,#77ccff,#3399ee,#0066bb)',
+   gb:'radial-gradient(circle at 35% 30%,#eeeeff,#ccccee,#9999bb)',sec:'paises'},
 
-  {id:'alemanha', name:'🇩🇪 Alemanha',  emoji:'🇩🇪',price:500,
-   gr:'radial-gradient(circle at 35% 30%,#555555,#222222,#000000)',
-   gb:'radial-gradient(circle at 35% 30%,#ffcc00,#dd9900,#996600)',sec:'paises'},
+  {id:'alemanha', name:'🇩🇪 Alemanha',  emoji:'🇩🇪', flag:'🇩🇪', price:500,
+   gr:'radial-gradient(circle at 35% 30%,#777777,#333333,#111111)',
+   gb:'radial-gradient(circle at 35% 30%,#ffdd00,#ddaa00,#997700)',sec:'paises'},
 
-  {id:'espanha',  name:'🇪🇸 Espanha',   emoji:'🇪🇸',price:550,
-   gr:'radial-gradient(circle at 35% 30%,#ff3333,#cc0000,#880000)',
-   gb:'radial-gradient(circle at 35% 30%,#ffcc00,#dd9900,#886600)',sec:'paises'},
+  {id:'espanha',  name:'🇪🇸 Espanha',   emoji:'🇪🇸', flag:'🇪🇸', price:550,
+   gr:'radial-gradient(circle at 35% 30%,#ff5555,#dd0000,#990000)',
+   gb:'radial-gradient(circle at 35% 30%,#ffdd00,#ddaa00,#886600)',sec:'paises'},
 
-  // ESPECIAIS — Quanto mais elaborado visualmente, mais caro
-  {id:'caveira',  name:'💀 Caveira',    emoji:'💀',price:600,
-   gr:'radial-gradient(circle at 35% 30%,#999999,#555555,#222222)',
-   gb:'radial-gradient(circle at 35% 30%,#ccbbaa,#aa9988,#775544)',sec:'especiais'},
+  // ESPECIAIS
+  {id:'caveira',  name:'💀 Caveira',    emoji:'💀', flag:'💀', price:600,
+   gr:'radial-gradient(circle at 35% 30%,#bbbbbb,#777777,#333333)',
+   gb:'radial-gradient(circle at 35% 30%,#ddccbb,#bb9988,#886655)',sec:'especiais'},
 
-  {id:'rosa',     name:'🌹 Rosa',       emoji:'🌹',price:750,
-   gr:'radial-gradient(circle at 30% 25%,#ffaad4,#ee4499,#aa1166)',
-   gb:'radial-gradient(circle at 30% 25%,#ffd4ee,#ff88cc,#cc44aa)',sec:'especiais'},
+  {id:'rosa',     name:'🌹 Rosa',       emoji:'🌹', flag:'🌹', price:750,
+   gr:'radial-gradient(circle at 30% 25%,#ffccee,#ff44aa,#cc1177)',
+   gb:'radial-gradient(circle at 30% 25%,#ffddee,#ffaadd,#ee55bb)',sec:'especiais'},
 
-  {id:'gelo',     name:'❄️ Gelo',       emoji:'❄️',price:900,
-   gr:'radial-gradient(circle at 30% 25%,#cceeff,#66bbee,#0077aa)',
-   gb:'radial-gradient(circle at 30% 25%,#eef8ff,#aaddff,#55aadd)',sec:'especiais'},
+  {id:'gelo',     name:'❄️ Gelo',       emoji:'❄️', flag:'❄️', price:900,
+   gr:'radial-gradient(circle at 30% 25%,#ddf4ff,#77ccee,#0088bb)',
+   gb:'radial-gradient(circle at 30% 25%,#eef8ff,#bbddff,#66aadd)',sec:'especiais'},
 
-  {id:'fogo',     name:'🔥 Fogo',       emoji:'🔥',price:1100,
-   gr:'radial-gradient(circle at 30% 25%,#ffdd00,#ff6600,#cc2200)',
-   gb:'radial-gradient(circle at 30% 25%,#ff4400,#cc1100,#880000)',sec:'especiais'},
+  {id:'fogo',     name:'🔥 Fogo',       emoji:'🔥', flag:'🔥', price:1100,
+   gr:'radial-gradient(circle at 30% 25%,#ffee00,#ff7700,#dd2200)',
+   gb:'radial-gradient(circle at 30% 25%,#ff6600,#dd1100,#990000)',sec:'especiais'},
 
-  {id:'neon',     name:'⚡ Neon',       emoji:'⚡',price:1300,
-   gr:'radial-gradient(circle at 30% 25%,#00ffcc,#00cc88,#007744)',
-   gb:'radial-gradient(circle at 30% 25%,#ccff00,#88dd00,#447700)',sec:'especiais'},
+  {id:'neon',     name:'⚡ Neon',       emoji:'⚡', flag:'⚡', price:1300,
+   gr:'radial-gradient(circle at 30% 25%,#00ffdd,#00dd99,#008855)',
+   gb:'radial-gradient(circle at 30% 25%,#ddff00,#99ee00,#557700)',sec:'especiais'},
 
-  {id:'galaxia',  name:'🌌 Galáxia',    emoji:'🌌',price:1600,
-   gr:'radial-gradient(circle at 30% 25%,#dd88ff,#9922ee,#550099)',
-   gb:'radial-gradient(circle at 30% 25%,#4422bb,#110077,#050033)',sec:'especiais'},
+  {id:'galaxia',  name:'🌌 Galáxia',    emoji:'🌌', flag:'🌌', price:1600,
+   gr:'radial-gradient(circle at 30% 25%,#ee99ff,#aa22ff,#660099)',
+   gb:'radial-gradient(circle at 30% 25%,#5533cc,#221188,#080033)',sec:'especiais'},
 
-  {id:'ouro_s',   name:'🏆 Ouro Puro',  emoji:'🏆',price:2000,
-   gr:'radial-gradient(circle at 30% 25%,#fff0aa,#ffcc00,#cc9900)',
-   gb:'radial-gradient(circle at 30% 25%,#ffd700,#cc9900,#886600)',sec:'especiais'},
+  {id:'ouro_s',   name:'🏆 Ouro Puro',  emoji:'🏆', flag:'🏆', price:2000,
+   gr:'radial-gradient(circle at 30% 25%,#fff4bb,#ffdd00,#ddaa00)',
+   gb:'radial-gradient(circle at 30% 25%,#ffe500,#ddaa00,#997700)',sec:'especiais'},
 
-  {id:'diamante_s',name:'💎 Diamante',  emoji:'💎',price:2800,
-   gr:'radial-gradient(circle at 30% 25%,#ffffff,#aaeeff,#33bbee)',
-   gb:'radial-gradient(circle at 30% 25%,#ccffff,#66ddff,#0099cc)',sec:'especiais'},
+  {id:'diamante_s',name:'💎 Diamante',  emoji:'💎', flag:'💎', price:2800,
+   gr:'radial-gradient(circle at 30% 25%,#ffffff,#ccf0ff,#55ccee)',
+   gb:'radial-gradient(circle at 30% 25%,#ddfeff,#88eeff,#00aacc)',sec:'especiais'},
 
-  {id:'arcoiris', name:'🌈 Arco-Íris',  emoji:'🌈',price:4500,
-   gr:'radial-gradient(circle at 30% 25%,#ff4444,#ff8800,#ffdd00)',
-   gb:'radial-gradient(circle at 30% 25%,#00ee88,#0088ff,#8844ff)',sec:'especiais'},
+  {id:'arcoiris', name:'🌈 Arco-Íris',  emoji:'🌈', flag:'🌈', price:4500,
+   gr:'radial-gradient(circle at 30% 25%,#ff5555,#ff9900,#ffee00)',
+   gb:'radial-gradient(circle at 30% 25%,#00ff99,#0099ff,#9955ff)',sec:'especiais'},
 ];
 
 
@@ -1142,7 +1178,6 @@ function updateMenuProfile(){
 }
 
 // ── SHOP ──────────────────────────────────────────────────────
-
 
 function buildShop(){
   ['paises','especiais'].forEach(sec=>{
@@ -1654,6 +1689,13 @@ function renderBoard(){
       const pdata=Object.values(players).find(p=>p.color===piece.color);
       const sk=getSkin(pdata?.skin||'default');
       pe.style.background=piece.color==='red'?sk.gr:sk.gb;
+      // Show flag/emoji on piece
+      if(sk.flag && !piece.king){
+        const fl=document.createElement('span');
+        fl.style.cssText='position:absolute;font-size:0.72em;pointer-events:none;user-select:none;line-height:1;filter:drop-shadow(0 1px 2px #0008)';
+        fl.textContent=sk.flag;
+        pe.appendChild(fl);
+      }
       const canPick=myTurn&&piece.color===MYCOLOR&&movablePieces.has(ck);
       if(canPick&&!mustFrom)pe.classList.add('mine');
       if(canPick&&mustFrom&&mustFrom[0]===r&&mustFrom[1]===c)pe.classList.add('mine');
