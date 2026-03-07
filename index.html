@@ -449,9 +449,9 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     <div class="rank-reset-info" id="rank-reset-info">Reset em:<br>calculando...</div>
   </div>
   <div class="rank-tabs">
-    <button class="rank-tab active" id="tab-patente" onclick="switchTab('patente')">🎖️ Patente</button>
-    <button class="rank-tab" id="tab-moedas" onclick="switchTab('moedas')">🪙 Moedas</button>
-    <button class="rank-tab" id="tab-vitorias" onclick="switchTab('vitorias')">⚔️ Vitórias</button>
+    <button class="rank-tab active" id="tab-patente">🎖️ Patente</button>
+    <button class="rank-tab" id="tab-moedas">🪙 Moedas</button>
+    <button class="rank-tab" id="tab-vitorias">⚔️ Vitórias</button>
   </div>
   <div class="rank-body" id="rank-list">
     <div class="rank-loading">Carregando ranking...</div>
@@ -873,6 +873,30 @@ document.getElementById('btn-adm-xp').onclick=async()=>{
 document.addEventListener('click',()=>ensureCtx(),{once:true});
 document.addEventListener('touchstart',()=>ensureCtx(),{once:true});
 
+// Parar som quando app vai para segundo plano
+document.addEventListener('visibilitychange',()=>{
+  if(!audioCtx) return;
+  if(document.hidden){
+    // Página ficou invisível — suspende o contexto de áudio
+    audioCtx.suspend();
+  } else {
+    // Voltou ao foco — retoma se música estiver ligada
+    audioCtx.resume();
+    if(musicOn) startBgMusic();
+  }
+});
+
+// Parar quando a janela perde foco (troca de app no celular)
+window.addEventListener('blur',()=>{
+  if(audioCtx) audioCtx.suspend();
+});
+window.addEventListener('focus',()=>{
+  if(audioCtx){
+    audioCtx.resume();
+    if(musicOn) startBgMusic();
+  }
+});
+
 
 
 
@@ -1010,6 +1034,9 @@ function switchTab(tab){
   });
   renderRankList();
 }
+$('tab-patente').onclick=()=>switchTab('patente');
+$('tab-moedas').onclick=()=>switchTab('moedas');
+$('tab-vitorias').onclick=()=>switchTab('vitorias');
 
 async function loadRanking(){
   const list = $('rank-list');
